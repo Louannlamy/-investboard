@@ -1,37 +1,54 @@
 import { NextResponse } from 'next/server'
 
-export async function GET() {
-  const key = process.env.NEWS_API_KEY
-  if (!key) {
-    return NextResponse.json({ error: 'Missing NewsAPI key' }, { status: 500 })
-  }
+const RSS_FEEDS = [
+  'https://feeds.reuters.com/reuters/businessNews',
+  'https://feeds.reuters.com/reuters/technologyNews',
+  'https://www.lesechos.fr/rss/rss_une.xml',
+  'https://www.boursorama.com/rss/actualites/',
+]
 
+async function parseRSS(url: string) {
   try {
-    const res = await fetch(
-      `https://newsapi.org/v2/everything?q=bourse+CAC40+investissement+ETF+marchés+financiers&language=fr&sortBy=publishedAt&pageSize=10&apiKey=${key}`,
-      { next: { revalidate: 3600 } }
-    )
-    const data = await res.json()
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      next: { revalidate: 3600 }
+    })
+    const text = await res.text()
+    const items: any[] = []
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g
+    let match
+    while ((match = itemRegex.exec(text)) !== null) {
+      const item = match[1]
+      const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>|<title>(.*?)<\/title>/)?.[1] || item.match(/<title>(.*?)<\/title>/)?.[1] || ''
+      const description = item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>|<description>(.*?)<\/description>/)?.[1] || ''
+      const link = item.match(/<link>(.*?)<\/link>|<link\s+href="(.*?)"/)?.[1] || ''
+      const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || ''
+      if (title) {
+        items.push({
+          title: title.replace(/<[^>]*>/g, '').trim(),
+          description: description.replace(/<[^>]*>/g, '').substring(0, 200).trim(),
+          url: link.trim(),
+          publishedAt: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
+          source: new URL(url).hostname.replace('www.', '').replace('feeds.', '')
+        })
+      }
+    }
+    return items.slice(0, 5)
+  } catch (e) {
+    console.error(`RSS fetch error for ${url}:`, e)
+    return []
+  }
+}
 
-    const englishRes = await fetch(
-      `https://newsapi.org/v2/everything?q=stock+market+ETF+S%26P500+investing+Fed&language=en&sortBy=publishedAt&pageSize=10&apiKey=${key}`,
-      { next: { revalidate: 3600 } }
-    )
-    const englishData = await englishRes.json()
-
-    const articles = [
-      ...(data.articles || []),
-      ...(englishData.articles || []),
-    ]
-      .filter((a: any) => a.title && a.description)
-      .slice(0, 15)
-      .map((a: any) => ({
-        title: a.title,
-        description: a.description,
-        source: a.source?.name,
-        publishedAt: a.publishedAt,
-        url: a.url,
-      }))
+export async function GET() {
+  try {
+    const results = await Promise.allSettled(RSS_FEEDS.map(parseRSS))
+    const articles = results
+      .filter(r => r.status === 'fulfilled')
+      .flatMap(r => (r as PromiseFulfilledResult<any[]>).value)
+      .filter(a => a.title)
+      .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+      .slice(0, 20)
 
     return NextResponse.json({
       articles,
