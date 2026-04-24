@@ -792,21 +792,6 @@ export default function InvestBoard() {
     </div>
   )}
 </div>
-  </div>
-  <input
-    type="text"
-    
-    onChange={e => { setValuationFile(e.target.files?.[0] || null); setValuationError(''); }}
-    placeholder="https://drive.google.com/file/d/... ou lien direct PDF"
-    style={{ width:'100%', border:'1px solid rgba(25, 25, 35, 0.3)', borderRadius:10, padding:'10px 14px', fontSize:13, fontFamily:'DM Sans', color:'#111827', outline:'none', boxSizing:'border-box' }}
-  />
-  {valuationFile && (
-    <div style={{ marginTop:10, padding:'8px 12px', background:'#f0fdf8', border:'1px solid rgba(5,150,105,0.2)', borderRadius:8, fontSize:12, color:'#059669' }}>
-      ✅ Lien détecté — prêt pour l'analyse
-    </div>
-  )}
-</div>
-
     {/* Prix actuel */}
     {valuationFile && (
       <div style={{ background:'#fff', border:'1px solid rgba(0,0,0,0.07)', borderRadius:15, padding:20, marginBottom:20, boxShadow:'0 1px 3px rgba(0,0,0,0.08)' }}>
