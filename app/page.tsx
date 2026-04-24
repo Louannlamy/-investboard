@@ -6,15 +6,32 @@ import { Line } from 'react-chartjs-2'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler)
 
+const ASSETS = [
+  { id:'IWDA', name:'iShares Core MSCI World UCITS', cat:'low', pea:true, peaAlt:null, what:'ETF UCITS répliquant 1 500 grandes entreprises dans 23 pays développés (USA 70%, Europe, Japon). BlackRock. Frais 0.20%/an.', p10:9.8, p15:10.2, pe:'19.8x', ytd:'+6.1%', maxDD:'-32%', vol:'Faible', sharpe:'0.72' },
+  { id:'VWCE', name:'Vanguard FTSE All-World UCITS', cat:'low', pea:true, peaAlt:null, what:'~3 700 actions couvrant 90% de la capitalisation mondiale (développés + émergents). Vanguard. Frais 0.22%/an.', p10:10.1, p15:null, pe:'18.4x', ytd:'+6.4%', maxDD:'-33%', vol:'Faible', sharpe:'0.74' },
+  { id:'ERNS', name:'Amundi ETF Overnight €STR', cat:'low', pea:true, peaAlt:null, what:'ETF monétaire euros répliquant les dépôts overnight zone euro. Équivalent institutionnel d\'un livret. Amundi. Frais 0.10%/an.', p10:1.8, p15:1.6, pe:'—', ytd:'+1.4%', maxDD:'-0.5%', vol:'Quasi-nulle', sharpe:'0.95' },
+  { id:'AGG', name:'iShares Core US Agg Bond', cat:'low', pea:false, peaAlt:'IEAG', what:'ETF obligataire US diversifié. Stabilisateur de portefeuille. Non éligible PEA — équivalent: IEAG. BlackRock. Frais 0.03%/an.', p10:2.1, p15:2.8, pe:'—', ytd:'+1.2%', maxDD:'-18%', vol:'Très faible', sharpe:'0.45' },
+  { id:'SPY', name:'SPDR S&P 500 ETF', cat:'mid', pea:false, peaAlt:'CSP1', what:'Le plus grand ETF au monde — les 500 plus grandes entreprises US. Non éligible PEA — équivalent: CSP1. State Street. Frais 0.09%/an.', p10:13.2, p15:14.1, pe:'22.4x', ytd:'+8.4%', maxDD:'-34%', vol:'Modérée', sharpe:'0.88' },
+  { id:'QQQ', name:'Invesco NASDAQ-100 ETF', cat:'mid', pea:false, peaAlt:'EQQQ', what:'Top 100 entreprises non-financières du NASDAQ. Très concentré tech. Non éligible PEA — équivalent: EQQQ. Frais 0.20%/an.', p10:17.8, p15:18.3, pe:'28.1x', ytd:'+10.2%', maxDD:'-38%', vol:'Modérée', sharpe:'0.81' },
+  { id:'VIG', name:'Vanguard Dividend Appreciation', cat:'mid', pea:false, peaAlt:'VGWD', what:'ETF concentré sur les entreprises qui augmentent leurs dividendes depuis 10+ ans. Non éligible PEA — équivalent: VGWD. Frais 0.06%/an.', p10:11.4, p15:12.1, pe:'21.3x', ytd:'+7.2%', maxDD:'-28%', vol:'Modérée', sharpe:'0.86' },
+  { id:'HLTH', name:'iShares Healthcare Innovation UCITS', cat:'mid', pea:true, peaAlt:null, what:'ETF santé mondial UCITS. Eli Lilly, Novo Nordisk, biotech. Éligible PEA directement. BlackRock. Frais 0.25%/an.', p10:10.4, p15:11.2, pe:'17.8x', ytd:'+4.8%', maxDD:'-26%', vol:'Modérée', sharpe:'0.76' },
+  { id:'MSCI', name:'MSCI Inc.', cat:'mid', pea:false, peaAlt:null, what:'Fournisseur d\'indices boursiers mondiaux. Quasi-monopole. Modèle abonnements ultra-récurrents. Siège USA — CTO uniquement.', p10:22.8, p15:null, pe:'37.2x', ytd:'+9.1%', maxDD:'-40%', vol:'Modérée', sharpe:'0.92' },
+  { id:'NVDA', name:'NVIDIA Corporation', cat:'high', pea:false, peaAlt:'SEMI', what:'Leader mondial des puces GPU pour l\'IA. Ses puces équipent OpenAI, Google, Microsoft. Siège USA — non PEA. Équivalent PEA: SEMI.', p10:58.2, p15:44.1, pe:'52.3x', ytd:'+18.4%', maxDD:'-66%', vol:'Très élevée', sharpe:'1.12' },
+  { id:'MSFT', name:'Microsoft Corporation', cat:'high', pea:false, peaAlt:'EQQQ', what:'Azure cloud, Office 365, IA via OpenAI (Copilot). Siège USA — non PEA. Via PEA: EQQQ donne ~8% expo Microsoft.', p10:29.1, p15:23.4, pe:'33.8x', ytd:'+7.8%', maxDD:'-38%', vol:'Élevée', sharpe:'0.98' },
+  { id:'ASML', name:'ASML Holding', cat:'high', pea:true, peaAlt:null, what:'Monopole mondial machines lithographie EUV. Sans ASML, pas de puces NVIDIA ni Apple Silicon. Siège Pays-Bas — ÉLIGIBLE PEA.', p10:31.4, p15:28.7, pe:'38.2x', ytd:'+12.4%', maxDD:'-55%', vol:'Élevée', sharpe:'0.88' },
+  { id:'NOVO', name:'Novo Nordisk', cat:'high', pea:true, peaAlt:null, what:'N°1 mondial insuline & obésité (Ozempic, Wegovy). A été la 1ère capitalisation d\'Europe. Siège Danemark — ÉLIGIBLE PEA.', p10:25.4, p15:22.8, pe:'24.8x', ytd:'-8.4%', maxDD:'-50%', vol:'Élevée', sharpe:'0.84' },
+  { id:'SEMI', name:'iShares MSCI Global Semiconductors UCITS', cat:'high', pea:true, peaAlt:null, what:'ETF semis UCITS — NVIDIA, TSMC, Broadcom, AMD... 30 valeurs. Éligible PEA. BlackRock. Frais 0.35%/an.', p10:26.8, p15:23.1, pe:'28.4x', ytd:'+14.2%', maxDD:'-60%', vol:'Très élevée', sharpe:'0.79' },
+  { id:'VWO', name:'iShares Core MSCI Emerging Markets UCITS', cat:'high', pea:true, peaAlt:null, what:'Marchés émergents UCITS — Inde (22%), Chine (25%), Taiwan... 2600+ actions. Éligible PEA. BlackRock. Frais 0.18%/an.', p10:4.2, p15:5.8, pe:'12.4x', ytd:'+7.1%', maxDD:'-52%', vol:'Élevée', sharpe:'0.41' },
+  { id:'LVMH', name:'LVMH Moët Hennessy', cat:'high', pea:true, peaAlt:null, what:'N°1 mondial luxe. Louis Vuitton, Dior, Sephora, Bulgari... 75 maisons. Siège Paris — ÉLIGIBLE PEA directement.', p10:18.4, p15:19.2, pe:'21.4x', ytd:'+3.2%', maxDD:'-45%', vol:'Élevée', sharpe:'0.74' },
+  { id:'IBIT', name:'iShares Bitcoin Trust ETF', cat:'high', pea:false, peaAlt:null, what:'ETF Bitcoin spot BlackRock. Détient directement du Bitcoin. Domicilié USA — non PEA. CTO uniquement. Frais 0.25%/an.', p10:null, p15:null, pe:'—', ytd:'+22.4%', maxDD:'-75%', vol:'Extrême', sharpe:'0.62' },
+  { id:'ARKK', name:'ARK Innovation ETF', cat:'high', pea:false, peaAlt:null, what:'ETF actif Cathie Wood. Disruptif mais sous-performance chronique depuis 2021. Frais très élevés 0.75%/an. Non PEA.', p10:4.1, p15:null, pe:'—', ytd:'-8.2%', maxDD:'-80%', vol:'Extrême', sharpe:'0.24' },
+]
 
 type Price = { price: number; change: number; changePercent: number }
 type Signal = 'buy' | 'hold' | 'sell'
 type PortfolioPosition = { assetId: string; qty: number; buyPrice: number; date: string }
 export default function InvestBoard() {
   const [activeTab, setActiveTab] = useState('market')
-  const [assets, setAssets] = useState<any[]>([])
-const [assetsLoading, setAssetsLoading] = useState(true)
-const [addingAsset, setAddingAsset] = useState(false)
   const [prices, setPrices] = useState<Record<string, Price>>({})
   const [news, setNews] = useState<any[]>([])
   const [analysis, setAnalysis] = useState<any>(null)
@@ -36,20 +53,22 @@ const [addingAsset, setAddingAsset] = useState(false)
   const [simMonthly, setSimMonthly] = useState(200)
   const [simYears, setSimYears] = useState(20)
   const [simRate, setSimRate] = useState(11.5)
-  const [globalSearch, setGlobalSearch] = useState("")
+  const [globalSearch, setGlobalSearch] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const [selectedResult, setSelectedResult] = useState<any>(null)
   const [selectedPrice, setSelectedPrice] = useState<any>(null)
   const [selectedPriceLoading, setSelectedPriceLoading] = useState(false)
+  const [assets, setAssets] = useState<any[]>([])
+  const [assetsLoading, setAssetsLoading] = useState(true)
+  const [addingAsset, setAddingAsset] = useState(false)
 
-useEffect(() => {
-  const saved = localStorage.getItem('ib_portfolio')
-  if (saved) setPortfolio(JSON.parse(saved))
-  fetchAssets()
-  fetchPrices()
-  fetchNews()
-}, [])
+  useEffect(() => {
+    const saved = localStorage.getItem('ib_portfolio')
+    if (saved) setPortfolio(JSON.parse(saved))
+    fetchPrices()
+    fetchNews()
+  }, [])
 
   const fetchPrices = async () => {
     setPricesLoading(true)
@@ -71,18 +90,6 @@ useEffect(() => {
       if (data.articles) setNews(data.articles)
     } catch (e) { console.error(e) }
   }
-}
-  const fetchAssets = async () => {
-    setAssetsLoading(true)
-    try {
-      const res = await fetch("/api/assets")
-      const data = await res.json()
-      if (data.assets) setAssets(data.assets)
-    } catch(e) { console.error(e) }
-    setAssetsLoading(false)
-  }
-
-
 
   const fetchAnalysis = useCallback(async () => {
     setAnalysisLoading(true)
@@ -112,7 +119,7 @@ useEffect(() => {
   const removePosition = (idx: number) => savePortfolio(portfolio.filter((_, i) => i !== idx))
 
   const getSignal = (id: string): Signal => {
-    if (analysis?.assetsignals?.[id]?.signal) return analysis.assetsignals[id].signal
+    if (analysis?.assetSignals?.[id]?.signal) return analysis.assetSignals[id].signal
     const defaults: Record<string, Signal> = { IWDA:'buy',VWCE:'buy',ERNS:'hold',AGG:'hold',SPY:'buy',QQQ:'buy',VIG:'buy',HLTH:'buy',MSCI:'buy',NVDA:'hold',MSFT:'buy',ASML:'buy',NOVO:'buy',SEMI:'buy',VWO:'hold',LVMH:'buy',IBIT:'hold',ARKK:'sell' }
     return defaults[id] || 'hold'
   }
@@ -150,7 +157,31 @@ useEffect(() => {
     setSelectedPriceLoading(false)
   }
 
-  const fetchSignalReason = async (asset: typeof assets[0]) => {
+  const fetchAssets = async () => {
+    setAssetsLoading(true)
+    try {
+      const res = await fetch("/api/assets")
+      const data = await res.json()
+      if (data.assets) setAssets(data.assets)
+    } catch(e) { console.error(e) }
+    setAssetsLoading(false)
+  }
+
+  const addAssetFromSearch = async (symbol: string, name: string, exchange: string, type: string) => {
+    setAddingAsset(true)
+    try {
+      const res = await fetch("/api/assets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ symbol, name, exchange, type }) })
+      const data = await res.json()
+      if (data.asset) {
+        setAssets((prev: any) => [...prev.filter((a: any) => a.id !== data.asset.id), data.asset])
+        setGlobalSearch(""); setSearchResults([]); setSelectedResult(null); setSelectedPrice(null)
+        alert("✅ " + name + " ajouté!")
+      }
+    } catch(e) { console.error(e) }
+    setAddingAsset(false)
+  }
+
+  const fetchSignalReason = async (asset: typeof ASSETS[0]) => {
     if (signalReasons[asset.id] || signalLoading[asset.id]) return
     setSignalLoading(prev => ({ ...prev, [asset.id]: true }))
     try {
@@ -165,7 +196,7 @@ useEffect(() => {
     setSignalLoading(prev => ({ ...prev, [asset.id]: false }))
   }
 
-  const filteredassets = assets
+  const filteredAssets = ASSETS
     .filter(a => curCat === 'all' || a.cat === curCat)
     .filter(a => !peaMode || a.pea)
     .filter(a => !searchQuery || a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.id.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -173,9 +204,9 @@ useEffect(() => {
   const today = new Date().toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
 
   const portRows = (() => {
-    const merged: Record<string, { asset: typeof assets[0], positions: PortfolioPosition[] }> = {}
+    const merged: Record<string, { asset: typeof ASSETS[0], positions: PortfolioPosition[] }> = {}
     portfolio.forEach(p => {
-      const asset = assets.find(a => a.id === p.assetId)
+      const asset = ASSETS.find(a => a.id === p.assetId)
       if (!asset) return
       if (!merged[p.assetId]) merged[p.assetId] = { asset, positions: [] }
       merged[p.assetId].positions.push(p)
@@ -239,90 +270,6 @@ useEffect(() => {
             </button>
           ))}
         </div>
-        {/* ══ SEARCH BAR GLOBALE ══ */}
-        <div style={{ marginBottom:24, position:'relative' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10, background:'#f8f9fc', border:'1px solid rgba(0,0,0,0.1)', borderRadius:14, padding:'10px 16px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
-        <span style={{ fontSize:18 }}>🔍</span>
-        <input
-        type="text"
-        placeholder="Rechercher une action, ETF... (ex: Apple, Airbus, Bitcoin)"
-        value={globalSearch}
-        onChange={e => { setGlobalSearch(e.target.value); fetchGlobalSearch(e.target.value); }}
-        style={{ flex:1, border:'none', background:'transparent', fontSize:14, fontFamily:'DM Sans', color:'#111827', outline:'none' }}
-        />
-        {searchLoading && <span style={{ fontSize:12, color:'#6b7280' }}>⏳</span>}
-        {globalSearch && (
-        <button onClick={() => { setGlobalSearch(''); setSearchResults([]); setSelectedResult(null); setSelectedPrice(null); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:16, color:'#9ca3af' }}>×</button>
-        )}
-        </div>
-        
-        {searchResults.length > 0 && (
-        <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'#fff', border:'1px solid rgba(0,0,0,0.1)', borderRadius:12, boxShadow:'0 8px 24px rgba(0,0,0,0.12)', zIndex:100, marginTop:4, overflow:'hidden' }}>
-        {searchResults.map((r: any) => (
-        <div key={r.symbol}
-        onClick={() => { fetchSelectedPrice(r.symbol, r.name); setSearchResults([]); setGlobalSearch(r.name); }}
-        style={{ padding:'12px 16px', cursor:'pointer', borderBottom:'1px solid rgba(0,0,0,0.05)', display:'flex', alignItems:'center', justifyContent:'space-between' }}
-        onMouseEnter={e => (e.currentTarget.style.background='#f8f9fc')}
-        onMouseLeave={e => (e.currentTarget.style.background='#fff')}>
-        <div>
-        <div style={{ fontWeight:600, fontSize:13 }}>{r.name}</div>
-        <div style={{ fontSize:11, color:'#6b7280', fontFamily:'DM Mono' }}>{r.symbol} · {r.exchange} · {r.type}</div>
-        </div>
-        <span style={{ fontSize:11, padding:'2px 8px', borderRadius:10, background:r.type==='ETF'?'#dbeafe':r.type==='EQUITY'?'#d1fae5':'#f3f4f6', color:r.type==='ETF'?'#2563eb':r.type==='EQUITY'?'#059669':'#6b7280', fontFamily:'DM Mono', fontWeight:600 }}>
-        {r.type}
-        </span>
-        </div>
-        ))}
-        </div>
-        )}
-        
-        {selectedResult && (
-        <div style={{ marginTop:12, background:'#fff', border:'1px solid rgba(99,102,241,0.2)', borderRadius:14, padding:20, boxShadow:'0 2px 8px rgba(99,102,241,0.08)' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
-        <div>
-        <div style={{ fontFamily:'Syne', fontWeight:700, fontSize:18 }}>{selectedResult.name}</div>
-        <div style={{ fontSize:12, color:'#6b7280', fontFamily:'DM Mono', marginTop:2 }}>{selectedResult.symbol}</div>
-        </div>
-        {selectedPriceLoading ? (
-        <div style={{ fontSize:24, color:'#9ca3af' }}>⏳</div>
-        ) : selectedPrice && (
-        <div style={{ textAlign:'right' }}>
-        <div style={{ fontFamily:'Syne', fontWeight:700, fontSize:28, color:'#111827' }}>
-        {selectedPrice.price?.toLocaleString('fr-FR', { minimumFractionDigits:2, maximumFractionDigits:2 })} {selectedPrice.currency}
-        </div>
-        <div style={{ fontSize:13, fontWeight:600, fontFamily:'DM Mono', color:selectedPrice.changePercent>=0?'#059669':'#dc2626' }}>
-        {selectedPrice.changePercent>=0?'+':''}{selectedPrice.changePercent?.toFixed(2)}% auj.
-        </div>
-        <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>{selectedPrice.exchange}</div>
-        </div>
-        )}
-        </div>
-        {selectedPrice && (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-        <div style={{ background:'#f8f9fc', borderRadius:10, padding:'12px 14px' }}>
-        <div style={{ fontSize:10, color:'#9ca3af', fontFamily:'DM Mono', textTransform:'uppercase', marginBottom:4 }}>Variation du jour</div>
-        <div style={{ fontSize:15, fontWeight:600, fontFamily:'DM Mono', color:selectedPrice.change>=0?'#059669':'#dc2626' }}>
-        {selectedPrice.change>=0?'+':''}{selectedPrice.change?.toFixed(2)} {selectedPrice.currency}
-        </div>
-        </div>
-        <div style={{ background:'#f0fdf8', borderRadius:10, padding:'12px 14px' }}>
-        <div style={{ fontSize:10, color:'#9ca3af', fontFamily:'DM Mono', textTransform:'uppercase', marginBottom:4 }}>Source</div>
-        <div style={{ fontSize:12, color:'#059669', fontWeight:600 }}>✅ Yahoo Finance</div>
-        <div style={{ fontSize:11, color:'#6b7280' }}>Prix vérifié temps réel</div>
-        </div>
-        </div>
-        )}
-        <button onClick={() => { setSelectedResult(null); setSelectedPrice(null); setGlobalSearch(''); }} style={{ marginTop:12, background:'none', border:'1px solid rgba(0,0,0,0.1)', borderRadius:8, padding:'6px 14px', fontSize:12, cursor:'pointer', color:'#6b7280', fontFamily:'DM Sans' }}>
-        <button
-        onClick={() => addAssetFromSearch(selectedResult.symbol, selectedResult.name, selectedPrice?.exchange || '', 'EQUITY')}
-        disabled={addingAsset}
-        style={{ marginTop:12, marginRight:8, background:'#6366f1', color:'#fff', border:'none', borderRadius:8, padding:'6px 14px', fontSize:12, cursor:'pointer', fontFamily:'DM Sans', fontWeight:600 }}>
-        {addingAsset ? '⏳ Ajout en cours...' : '➕ Ajouter à ma liste'}
-        </button>
-        Fermer ×
-        </button>
-        </div>
-        </div>
         {/* ══ TAB: MARCHÉ ══ */}
         {activeTab === 'market' && (
           <div>
@@ -376,7 +323,7 @@ useEffect(() => {
               />
             </div>
 
-            {/* assets table */}
+            {/* Assets table */}
             <div style={{ background:'#fff', border:'1px solid rgba(0,0,0,0.07)', borderRadius:15, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.08)', marginBottom:20 }}>
               <div style={{ padding:'13px 18px', borderBottom:'1px solid rgba(0,0,0,0.07)', background:'#f8f9fc', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                 <span style={{ fontFamily:'Syne', fontSize:14, fontWeight:700 }}>
@@ -395,10 +342,10 @@ useEffect(() => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredassets.length === 0 && (
+                    {filteredAssets.length === 0 && (
                       <tr><td colSpan={7} style={{ textAlign:'center', padding:30, color:'#6b7280' }}>Aucun actif trouvé pour "{searchQuery}"</td></tr>
                     )}
-                    {filteredassets.map(asset => {
+                    {filteredAssets.map(asset => {
                       const price = getPrice(asset.id)
                       const change = getChange(asset.id)
                       const signal = getSignal(asset.id)
@@ -477,7 +424,7 @@ useEffect(() => {
                                   </div>
 
                                   {/* Description + PEA */}
-                                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, fontSize:12, color:'#6b7280', lineHeight:1.7, marginBottom: analysis?.assetsignals?.[asset.id]?.reason ? 12 : 0 }}>
+                                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, fontSize:12, color:'#6b7280', lineHeight:1.7, marginBottom: analysis?.assetSignals?.[asset.id]?.reason ? 12 : 0 }}>
                                     <div style={{ padding:'12px 14px', borderRadius:10, border:'1px solid rgba(0,0,0,0.07)', background:'#fff' }}>
                                       <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'.07em', color:'#9ca3af', marginBottom:6, fontFamily:'DM Mono' }}>📋 Description complète</div>
                                       <div style={{ color:'#374151' }}>{asset.what}</div>
@@ -545,7 +492,7 @@ useEffect(() => {
                 <div>
                   <div style={{ fontSize:11, color:'#6b7280', fontWeight:500, marginBottom:4 }}>Actif</div>
                   <select value={posAsset} onChange={e => setPosAsset(e.target.value)} style={{ width:'100%', border:'1px solid rgba(0,0,0,0.13)', borderRadius:8, padding:'8px 10px', fontSize:12, fontFamily:'DM Sans', color:'#111827', background:'#fff' }}>
-                    {assets.map(a => <option key={a.id} value={a.id}>{a.id} — {a.name}</option>)}
+                    {ASSETS.map(a => <option key={a.id} value={a.id}>{a.id} — {a.name}</option>)}
                   </select>
                 </div>
                 <div>
@@ -694,6 +641,83 @@ useEffect(() => {
             </div>
           </div>
         )}
+{/* ══ SEARCH BAR GLOBALE ══ */}
+<div style={{ marginBottom:24, position:'relative' }}>
+  <div style={{ display:'flex', alignItems:'center', gap:10, background:'#f8f9fc', border:'1px solid rgba(0,0,0,0.1)', borderRadius:14, padding:'10px 16px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
+    <span style={{ fontSize:18 }}>🔍</span>
+    <input
+      type="text"
+      placeholder="Rechercher une action, ETF... (ex: Apple, Airbus, Bitcoin)"
+      value={globalSearch}
+      onChange={e => { setGlobalSearch(e.target.value); fetchGlobalSearch(e.target.value); }}
+      style={{ flex:1, border:'none', background:'transparent', fontSize:14, fontFamily:'DM Sans', color:'#111827', outline:'none' }}
+    />
+    {searchLoading && <span style={{ fontSize:12, color:'#6b7280' }}>⏳</span>}
+    {globalSearch && (
+      <button onClick={() => { setGlobalSearch(''); setSearchResults([]); setSelectedResult(null); setSelectedPrice(null); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:16, color:'#9ca3af' }}>×</button>
+    )}
+  </div>
+
+  {searchResults.length > 0 && (
+    <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'#fff', border:'1px solid rgba(0,0,0,0.1)', borderRadius:12, boxShadow:'0 8px 24px rgba(0,0,0,0.12)', zIndex:100, marginTop:4, overflow:'hidden' }}>
+      {searchResults.map((r: any) => (
+        <div key={r.symbol}
+          onClick={() => { fetchSelectedPrice(r.symbol, r.name); setSearchResults([]); setGlobalSearch(r.name); }}
+          style={{ padding:'12px 16px', cursor:'pointer', borderBottom:'1px solid rgba(0,0,0,0.05)', display:'flex', alignItems:'center', justifyContent:'space-between' }}
+          onMouseEnter={e => (e.currentTarget.style.background='#f8f9fc')}
+          onMouseLeave={e => (e.currentTarget.style.background='#fff')}>
+          <div>
+            <div style={{ fontWeight:600, fontSize:13 }}>{r.name}</div>
+            <div style={{ fontSize:11, color:'#6b7280', fontFamily:'DM Mono' }}>{r.symbol} · {r.exchange} · {r.type}</div>
+          </div>
+          <span style={{ fontSize:11, padding:'2px 8px', borderRadius:10, background:r.type==='ETF'?'#dbeafe':r.type==='EQUITY'?'#d1fae5':'#f3f4f6', color:r.type==='ETF'?'#2563eb':r.type==='EQUITY'?'#059669':'#6b7280', fontFamily:'DM Mono', fontWeight:600 }}>
+            {r.type}
+          </span>
+        </div>
+      ))}
+    </div>
+  )}
+
+  {selectedResult && (
+    <div style={{ marginTop:12, background:'#fff', border:'1px solid rgba(99,102,241,0.2)', borderRadius:14, padding:20, boxShadow:'0 2px 8px rgba(99,102,241,0.08)' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
+        <div>
+          <div style={{ fontFamily:'Syne', fontWeight:700, fontSize:18 }}>{selectedResult.name}</div>
+          <div style={{ fontSize:12, color:'#6b7280', fontFamily:'DM Mono', marginTop:2 }}>{selectedResult.symbol}</div>
+        </div>
+        {selectedPriceLoading ? (
+          <div style={{ fontSize:24, color:'#9ca3af' }}>⏳</div>
+        ) : selectedPrice && (
+          <div style={{ textAlign:'right' }}>
+            <div style={{ fontFamily:'Syne', fontWeight:700, fontSize:28, color:'#111827' }}>
+              {selectedPrice.price?.toLocaleString('fr-FR', { minimumFractionDigits:2, maximumFractionDigits:2 })} {selectedPrice.currency}
+            </div>
+            <div style={{ fontSize:13, fontWeight:600, fontFamily:'DM Mono', color:selectedPrice.changePercent>=0?'#059669':'#dc2626' }}>
+              {selectedPrice.changePercent>=0?'+':''}{selectedPrice.changePercent?.toFixed(2)}% auj.
+            </div>
+            <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>{selectedPrice.exchange}</div>
+          </div>
+        )}
+      </div>
+      {selectedPrice && (
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+          <div style={{ background:'#f8f9fc', borderRadius:10, padding:'12px 14px' }}>
+            <div style={{ fontSize:10, color:'#9ca3af', fontFamily:'DM Mono', textTransform:'uppercase', marginBottom:4 }}>Variation du jour</div>
+            <div style={{ fontSize:15, fontWeight:600, fontFamily:'DM Mono', color:selectedPrice.change>=0?'#059669':'#dc2626' }}>
+              {selectedPrice.change>=0?'+':''}{selectedPrice.change?.toFixed(2)} {selectedPrice.currency}
+            </div>
+          </div>
+          <div style={{ background:'#f0fdf8', borderRadius:10, padding:'12px 14px' }}>
+            <div style={{ fontSize:10, color:'#9ca3af', fontFamily:'DM Mono', textTransform:'uppercase', marginBottom:4 }}>Source</div>
+            <div style={{ fontSize:12, color:'#059669', fontWeight:600 }}>✅ Yahoo Finance</div>
+            <div style={{ fontSize:11, color:'#6b7280' }}>Prix vérifié temps réel</div>
+          </div>
+        </div>
+      )}
+      <button onClick={() => { setSelectedResult(null); setSelectedPrice(null); setGlobalSearch(''); }} style={{ marginTop:12, background:'none', border:'1px solid rgba(0,0,0,0.1)', borderRadius:8, padding:'6px 14px', fontSize:12, cursor:'pointer', color:'#6b7280', fontFamily:'DM Sans' }}>
+        Fermer ×
+      </button>
+    </div>
   )}
 </div>
         {/* ══ TAB: NEWS ══ */}
