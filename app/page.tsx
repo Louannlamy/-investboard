@@ -197,7 +197,7 @@ export default function InvestBoard() {
     setSignalLoading(prev => ({ ...prev, [asset.id]: false }))
   }
 
-  const filteredAssets = ASSETS
+  const filteredAssets = assets
     .filter(a => curCat === 'all' || a.cat === curCat)
     .filter(a => !peaMode || a.pea)
     .filter(a => !searchQuery || a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.id.toLowerCase().includes(searchQuery.toLowerCase()))
