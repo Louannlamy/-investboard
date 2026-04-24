@@ -71,46 +71,6 @@ useEffect(() => {
       if (data.articles) setNews(data.articles)
     } catch (e) { console.error(e) }
   }
-const fetchAssets = async () => {
-  setAssetsLoading(true)
-  try {
-    const res = await fetch('/api/assets')
-    const data = await res.json()
-    if (data.assets) setAssets(data.assets)
-  } catch(e) { console.error(e) }
-  setAssetsLoading(false)
-}
-
-const addAssetFromSearch = async (symbol: string, name: string, exchange: string, type: string) => {
-  setAddingAsset(true)
-  try {
-    const res = await fetch('/api/assets', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ symbol, name, exchange, type })
-    })
-    const data = await res.json()
-    if (data.asset) {
-      setAssets(prev => [...prev.filter(a => a.id !== data.asset.id), data.asset])
-      setGlobalSearch('')
-      setSearchResults([])
-      setSelectedResult(null)
-      setSelectedPrice(null)
-      alert('✅ ' + name + ' ajouté à ta liste !')
-    }
-  } catch(e) { console.error(e) }
-  setAddingAsset(false)
-}
-
-const removeCustomAsset = async (id: string) => {
-  try {
-    await fetch('/api/assets', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    })
-    setAssets(prev => prev.filter(a => a.id !== id))
-  } catch(e) { console.error(e) }
 }
   const fetchAssets = async () => {
     setAssetsLoading(true)
