@@ -41,6 +41,8 @@ export default function InvestBoard() {
   const [curCat, setCurCat] = useState('all')
   const [peaMode, setPeaMode] = useState(false)
   const [expandedAsset, setExpandedAsset] = useState<string | null>(null)
+  const [signalReasons, setSignalReasons] = useState<Record<string, string>>({})
+  const [signalLoading, setSignalLoading] = useState<Record<string, boolean>>({})
   const [searchQuery, setSearchQuery] = useState('')
   const [portfolio, setPortfolio] = useState<PortfolioPosition[]>([])
   const [posAsset, setPosAsset] = useState('IWDA')
@@ -121,6 +123,21 @@ export default function InvestBoard() {
     const mr = rate / 100 / 12
     for (let m = 0; m < years * 12; m++) v = v * (1 + mr) + monthly
     return Math.round(v)
+  }
+
+  const fetchSignalReason = async (asset: typeof ASSETS[0]) => {
+    if (signalReasons[asset.id] || signalLoading[asset.id]) return
+    setSignalLoading(prev => ({ ...prev, [asset.id]: true }))
+    try {
+      const res = await fetch("/api/signal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetId: asset.id, assetName: asset.name, price: getPrice(asset.id), changePercent: getChange(asset.id), p10: asset.p10, p15: asset.p15, cat: asset.cat, pea: asset.pea }),
+      })
+      const data = await res.json()
+      if (data.reason) setSignalReasons(prev => ({ ...prev, [asset.id]: data.reason }))
+    } catch (e) { console.error(e) }
+    setSignalLoading(prev => ({ ...prev, [asset.id]: false }))
   }
 
   const filteredAssets = ASSETS
@@ -283,7 +300,7 @@ export default function InvestBoard() {
                         <>
                           <tr key={asset.id}
                             style={{ borderBottom: isExpanded ? 'none' : '1px solid rgba(0,0,0,0.07)', transition:'background .1s', cursor:'pointer', background: isExpanded ? '#f5f3ff' : '#fff' }}
-                            onClick={() => setExpandedAsset(isExpanded ? null : asset.id)}
+                            onClick={() => { const newExpanded = expandedAsset === asset.id ? null : asset.id; setExpandedAsset(newExpanded); if (newExpanded) fetchSignalReason(asset); }}
                             onMouseEnter={e => { if(!isExpanded) e.currentTarget.style.background='#f8f9fc' }}
                             onMouseLeave={e => { if(!isExpanded) e.currentTarget.style.background='#fff' }}>
                             <td style={{ padding:'11px 13px' }}>
@@ -378,7 +395,7 @@ export default function InvestBoard() {
                                   </div>
 
                                   {/* AI reason if available */}
-                                  {analysis?.assetSignals?.[asset.id]?.reason && (
+                                  <div style={{ padding:"10px 14px", background:"rgba(99,102,241,0.06)", borderRadius:10, border:"1px solid rgba(99,102,241,0.15)", fontSize:12, color:"#6366f1", lineHeight:1.7, marginTop:12 }}><strong>💡 Pourquoi ce signal ?</strong><br/>{signalLoading[asset.id] ? (<span style={{ color:"#9ca3af", fontStyle:"italic" }}>⏳ Analyse en cours...</span>) : signalReasons[asset.id] ? (signalReasons[asset.id]) : (<span style={{ color:"#9ca3af", fontStyle:"italic" }}>Chargement...</span>)}</div>
                                     <div style={{ padding:'10px 14px', background:'rgba(99,102,241,0.06)', borderRadius:10, border:'1px solid rgba(99,102,241,0.15)', fontSize:12, color:'#6366f1', fontStyle:'italic' }}>
                                       🤖 <strong>Analyse IA du jour :</strong> {analysis.assetSignals[asset.id].reason}
                                     </div>
