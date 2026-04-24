@@ -92,7 +92,25 @@ export async function GET() {
       console.error(`Error fetching ${asset.ticker}:`, e)
     }
   }
-
+// Récupère aussi les prix des actifs custom depuis Redis
+  try {
+    const { Redis } = await import('@upstash/redis')
+    const redis = Redis.fromEnv()
+    const customAssets = await redis.get<any[]>('custom_assets') || []
+    for (const asset of customAssets) {
+      if (!results[asset.id] && asset.symbol) {
+        try {
+          const customData = await fetchYahoo(asset.symbol)
+          if (customData) results[asset.id] = customData
+          await new Promise(r => setTimeout(r, 200))
+        } catch (e) {
+          console.error(`Error fetching custom asset ${asset.symbol}:`, e)
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Redis custom assets error:', e)
+  }
   return NextResponse.json({
     prices: results,
     updatedAt: new Date().toISOString(),
