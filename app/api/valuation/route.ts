@@ -5,19 +5,24 @@ const anthropic = new Anthropic()
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData()
-    const file = formData.get('file') as File
-    const currentPrice = formData.get('currentPrice') as string
-    const currency = formData.get('currency') as string || 'USD'
+    const { url, currentPrice, currency = 'USD' } = await request.json()
 
-    if (!file) return NextResponse.json({ error: 'Fichier manquant' }, { status: 400 })
+    if (!url) return NextResponse.json({ error: 'URL manquante' }, { status: 400 })
 
-    const bytes = await file.arrayBuffer()
-    const base64 = Buffer.from(bytes).toString('base64')
+    // Convertit Google Drive URL en URL de téléchargement direct
+    let downloadUrl = url
+    const gdrivMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)
+    if (gdrivMatch) {
+      downloadUrl = `https://drive.google.com/uc?export=download&id=${gdrivMatch[1]}`
+    }
+    // Dropbox
+    if (url.includes('dropbox.com')) {
+      downloadUrl = url.replace('?dl=0', '?dl=1').replace('www.dropbox', 'dl.dropboxusercontent')
+    }
 
-    const prompt = `Tu es un analyste financier senior spécialisé en valorisation d'entreprises. 
+    const prompt = `Tu es un analyste financier senior spécialisé en valorisation d'entreprises.
 Tu as reçu un document financier (rapport annuel, 10-K, document de référence AMF ou similaire).
-Le prix actuel de l'action est : ${currentPrice} ${currency}
+Le prix actuel de l'action est : ${currentPrice || 'non fourni'} ${currency}
 
 Analyse ce document en profondeur et génère une valorisation complète en JSON uniquement (pas de texte avant ou après) :
 
@@ -44,23 +49,23 @@ Analyse ce document en profondeur et génère une valorisation complète en JSON
     "sharesOutstanding": "Nombre d'actions en millions"
   },
   "dcfValuation": {
-    "wacc": "Coût moyen pondéré du capital en %",
-    "terminalGrowthRate": "Taux de croissance terminal en %",
+    "wacc": "WACC en %",
+    "terminalGrowthRate": "Taux terminal en %",
     "projectedFCF": [
-      {"year": "An 1", "fcf": 0, "growthRate": "% de croissance"},
-      {"year": "An 2", "fcf": 0, "growthRate": "% de croissance"},
-      {"year": "An 3", "fcf": 0, "growthRate": "% de croissance"},
-      {"year": "An 4", "fcf": 0, "growthRate": "% de croissance"},
-      {"year": "An 5", "fcf": 0, "growthRate": "% de croissance"}
+      {"year": "An 1", "fcf": 0, "growthRate": "%"},
+      {"year": "An 2", "fcf": 0, "growthRate": "%"},
+      {"year": "An 3", "fcf": 0, "growthRate": "%"},
+      {"year": "An 4", "fcf": 0, "growthRate": "%"},
+      {"year": "An 5", "fcf": 0, "growthRate": "%"}
     ],
     "terminalValue": 0,
     "enterpriseValue": 0,
     "equityValue": 0,
     "intrinsicValuePerShare": 0,
     "scenarios": {
-      "pessimistic": {"intrinsicValue": 0, "upside": "% par rapport au prix actuel"},
-      "base": {"intrinsicValue": 0, "upside": "% par rapport au prix actuel"},
-      "optimistic": {"intrinsicValue": 0, "upside": "% par rapport au prix actuel"}
+      "pessimistic": {"intrinsicValue": 0, "upside": "%"},
+      "base": {"intrinsicValue": 0, "upside": "%"},
+      "optimistic": {"intrinsicValue": 0, "upside": "%"}
     }
   },
   "multiplesValuation": {
@@ -79,8 +84,8 @@ Analyse ce document en profondeur et génère une valorisation complète en JSON
     "multiplesWeight": "40%",
     "weightedFairValue": 0,
     "currentPrice": ${currentPrice || 0},
-    "upside": "% de hausse/baisse potentielle",
-    "margin": "Marge de sécurité en %",
+    "upside": "%",
+    "margin": "%",
     "signal": "ACHETER ou CONSERVER ou VENDRE",
     "conviction": "FORTE ou MODÉRÉE ou FAIBLE"
   },
@@ -89,8 +94,8 @@ Analyse ce document en profondeur et génère une valorisation complète en JSON
     "weaknesses": ["Faiblesse 1", "Faiblesse 2"],
     "opportunities": ["Opportunité 1", "Opportunité 2"],
     "risks": ["Risque 1", "Risque 2", "Risque 3"],
-    "investmentThesis": "Thèse d'investissement complète en 4-5 phrases",
-    "keyMetrics": "Les 3 métriques clés à surveiller",
+    "investmentThesis": "Thèse d'investissement en 4-5 phrases",
+    "keyMetrics": "3 métriques clés à surveiller",
     "targetPrice": 0,
     "targetHorizon": "12 mois"
   }
@@ -105,11 +110,10 @@ Analyse ce document en profondeur et génère une valorisation complète en JSON
           {
             type: 'document',
             source: {
-              type: 'base64',
-              media_type: 'application/pdf',
-              data: base64,
+              type: 'url',
+              url: downloadUrl,
             },
-          },
+          } as any,
           {
             type: 'text',
             text: prompt,
@@ -125,6 +129,6 @@ Analyse ce document en profondeur et génère une valorisation complète en JSON
     return NextResponse.json({ valuation, analyzedAt: new Date().toISOString() })
   } catch (e) {
     console.error('Valuation error:', e)
-    return NextResponse.json({ error: 'Erreur lors de la valorisation' }, { status: 500 })
+    return NextResponse.json({ error: 'Erreur lors de la valorisation: ' + (e as Error).message }, { status: 500 })
   }
 }
