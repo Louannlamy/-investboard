@@ -211,7 +211,7 @@ export default function InvestBoard() {
       const data = await res.json()
       if (data.valuation) setValuation(data.valuation)
       else setValuationError(data.error || 'Erreur inconnue')
-    } catch(e) { setValuationError('Erreur: ' + e.message) }
+    } catch(e: any) { setValuationError('Erreur: ' + e.message) }
     setValuationLoading(false)
   }
 
