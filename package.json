@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
+    "@upstash/redis": "^1.37.0",
     "axios": "^1.15.2",
     "chart.js": "^4.5.1",
     "cheerio": "^1.2.0",
