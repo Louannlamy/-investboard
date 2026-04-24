@@ -777,7 +777,7 @@ export default function InvestBoard() {
   <input
     type="text"
     value={valuationUrl}
-    onChange={e => { setValuationUrl(e.target.value); setValuationUrl(''); setValuationError(''); }}
+    onChange={e => { setValuationUrl(e.target.value); setValuationError(''); }}
     placeholder="https://drive.google.com/file/d/... ou lien direct PDF"
     style={{ width:'100%', border:'1px solid rgba(25, 25, 35, 0.3)', borderRadius:10, padding:'10px 14px', fontSize:13, fontFamily:'DM Sans', color:'#111827', outline:'none', boxSizing:'border-box' }}
   />
