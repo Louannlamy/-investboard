@@ -53,12 +53,6 @@ export default function InvestBoard() {
   const [simMonthly, setSimMonthly] = useState(200)
   const [simYears, setSimYears] = useState(20)
   const [simRate, setSimRate] = useState(11.5)
-  const [globalSearch, setGlobalSearch] = useState("")
-  const [searchResults, setSearchResults] = useState<any[]>([])
-  const [searchLoading, setSearchLoading] = useState(false)
-  const [selectedResult, setSelectedResult] = useState<any>(null)
-  const [selectedPrice, setSelectedPrice] = useState<any>(null)
-  const [selectedPriceLoading, setSelectedPriceLoading] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('ib_portfolio')
@@ -129,33 +123,6 @@ export default function InvestBoard() {
     const mr = rate / 100 / 12
     for (let m = 0; m < years * 12; m++) v = v * (1 + mr) + monthly
     return Math.round(v)
-  }
-
-  const fetchGlobalSearch = async (q: string) => {
-    if (q.length < 2) { setSearchResults([]); return; }
-    setSearchLoading(true)
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
-      const data = await res.json()
-      setSearchResults(data.results || [])
-    } catch(e) { console.error(e) }
-    setSearchLoading(false)
-  }
-
-  const fetchSelectedPrice = async (symbol: string, name: string) => {
-    setSelectedResult({ symbol, name })
-    setSelectedPrice(null)
-    setSelectedPriceLoading(true)
-    try {
-      const res = await fetch("/api/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbol })
-      })
-      const data = await res.json()
-      setSelectedPrice(data)
-    } catch(e) { console.error(e) }
-    setSelectedPriceLoading(false)
   }
 
   const fetchSignalReason = async (asset: typeof ASSETS[0]) => {
@@ -246,53 +213,6 @@ export default function InvestBoard() {
               {label}
             </button>
           ))}
-        </div>
-        {/* ══ SEARCH BAR GLOBALE ══ */}
-        <div style={{ marginBottom:24, position:"relative" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, background:"#f8f9fc", border:"1px solid rgba(0,0,0,0.1)", borderRadius:14, padding:"10px 16px", boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
-            <span style={{ fontSize:18 }}>🔍</span>
-            <input type="text" placeholder="Rechercher une action, ETF, index... (ex: Apple, LVMH, SP500)" value={globalSearch} onChange={e => { setGlobalSearch(e.target.value); fetchGlobalSearch(e.target.value); }} style={{ flex:1, border:"none", background:"transparent", fontSize:14, fontFamily:"DM Sans", color:"#111827", outline:"none" }} />
-            {searchLoading {/* ══ TAB: MARCHÉ ══ */}{/* ══ TAB: MARCHÉ ══ */} <span style={{ fontSize:12, color:"#6b7280" }}>⏳</span>}
-            {globalSearch {/* ══ TAB: MARCHÉ ══ */}{/* ══ TAB: MARCHÉ ══ */} <button onClick={() => { setGlobalSearch(""); setSearchResults([]); setSelectedResult(null); setSelectedPrice(null); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, color:"#9ca3af" }}>×</button>}
-          </div>
-          {searchResults.length > 0 {/* ══ TAB: MARCHÉ ══ */}{/* ══ TAB: MARCHÉ ══ */} (
-            <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#fff", border:"1px solid rgba(0,0,0,0.1)", borderRadius:12, boxShadow:"0 8px 24px rgba(0,0,0,0.12)", zIndex:100, marginTop:4, overflow:"hidden" }}>
-              {searchResults.map((r: any) => (
-                <div key={r.symbol} onClick={() => { fetchSelectedPrice(r.symbol, r.name); setSearchResults([]); setGlobalSearch(r.name); }} style={{ padding:"12px 16px", cursor:"pointer", borderBottom:"1px solid rgba(0,0,0,0.05)", display:"flex", alignItems:"center", justifyContent:"space-between", transition:"background .1s" }} onMouseEnter={e => (e.currentTarget.style.background="#f8f9fc")} onMouseLeave={e => (e.currentTarget.style.background="#fff")}>
-                  <div><div style={{ fontWeight:600, fontSize:13 }}>{r.name}</div><div style={{ fontSize:11, color:"#6b7280", fontFamily:"DM Mono" }}>{r.symbol} · {r.exchange} · {r.type}</div></div>
-                  <span style={{ fontSize:11, padding:"2px 8px", borderRadius:10, background:r.type==="ETF"?"#dbeafe":r.type==="EQUITY"?"#d1fae5":"#f3f4f6", color:r.type==="ETF"?"#2563eb":r.type==="EQUITY"?"#059669":"#6b7280", fontFamily:"DM Mono", fontWeight:600 }}>{r.type}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          {selectedResult {/* ══ TAB: MARCHÉ ══ */}{/* ══ TAB: MARCHÉ ══ */} (
-            <div style={{ marginTop:12, background:"#fff", border:"1px solid rgba(99,102,241,0.2)", borderRadius:14, padding:20, boxShadow:"0 2px 8px rgba(99,102,241,0.08)" }}>
-              <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:16 }}>
-                <div><div style={{ fontFamily:"Syne", fontWeight:700, fontSize:18 }}>{selectedResult.name}</div><div style={{ fontSize:12, color:"#6b7280", fontFamily:"DM Mono", marginTop:2 }}>{selectedResult.symbol}</div></div>
-                {selectedPriceLoading ? (<div style={{ fontSize:24, color:"#9ca3af" }}>⏳</div>) : selectedPrice {/* ══ TAB: MARCHÉ ══ */}{/* ══ TAB: MARCHÉ ══ */} (
-                  <div style={{ textAlign:"right" }}>
-                    <div style={{ fontFamily:"Syne", fontWeight:700, fontSize:28, color:"#111827" }}>{selectedPrice.price?.toLocaleString("fr-FR", { minimumFractionDigits:2, maximumFractionDigits:2 })} {selectedPrice.currency}</div>
-                    <div style={{ fontSize:13, fontWeight:600, fontFamily:"DM Mono", color:selectedPrice.changePercent>=0?"#059669":"#dc2626" }}>{selectedPrice.changePercent>=0?"+":""}{selectedPrice.changePercent?.toFixed(2)}% auj.</div>
-                    <div style={{ fontSize:11, color:"#9ca3af", marginTop:2 }}>{selectedPrice.exchange}</div>
-                  </div>
-                )}
-              </div>
-              {selectedPrice {/* ══ TAB: MARCHÉ ══ */}{/* ══ TAB: MARCHÉ ══ */} (
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                  <div style={{ background:"#f8f9fc", borderRadius:10, padding:"12px 14px" }}>
-                    <div style={{ fontSize:10, color:"#9ca3af", fontFamily:"DM Mono", textTransform:"uppercase", marginBottom:4 }}>Variation du jour</div>
-                    <div style={{ fontSize:15, fontWeight:600, fontFamily:"DM Mono", color:selectedPrice.change>=0?"#059669":"#dc2626" }}>{selectedPrice.change>=0?"+":""}{selectedPrice.change?.toFixed(2)} {selectedPrice.currency}</div>
-                  </div>
-                  <div style={{ background:"#f0fdf8", borderRadius:10, padding:"12px 14px" }}>
-                    <div style={{ fontSize:10, color:"#9ca3af", fontFamily:"DM Mono", textTransform:"uppercase", marginBottom:4 }}>Données</div>
-                    <div style={{ fontSize:12, color:"#059669", fontWeight:600 }}>✅ Source Yahoo Finance</div>
-                    <div style={{ fontSize:11, color:"#6b7280" }}>Prix vérifié en temps réel</div>
-                  </div>
-                </div>
-              )}
-              <button onClick={() => { setSelectedResult(null); setSelectedPrice(null); setGlobalSearch(""); }} style={{ marginTop:12, background:"none", border:"1px solid rgba(0,0,0,0.1)", borderRadius:8, padding:"6px 14px", fontSize:12, cursor:"pointer", color:"#6b7280", fontFamily:"DM Sans" }}>Fermer ×</button>
-            </div>
-          )}
         </div>
         {/* ══ TAB: MARCHÉ ══ */}
         {activeTab === 'market' && (
@@ -665,7 +585,85 @@ export default function InvestBoard() {
             </div>
           </div>
         )}
+{/* ══ SEARCH BAR GLOBALE ══ */}
+<div style={{ marginBottom:24, position:'relative' }}>
+  <div style={{ display:'flex', alignItems:'center', gap:10, background:'#f8f9fc', border:'1px solid rgba(0,0,0,0.1)', borderRadius:14, padding:'10px 16px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
+    <span style={{ fontSize:18 }}>🔍</span>
+    <input
+      type="text"
+      placeholder="Rechercher une action, ETF... (ex: Apple, Airbus, Bitcoin)"
+      value={globalSearch}
+      onChange={e => { setGlobalSearch(e.target.value); fetchGlobalSearch(e.target.value); }}
+      style={{ flex:1, border:'none', background:'transparent', fontSize:14, fontFamily:'DM Sans', color:'#111827', outline:'none' }}
+    />
+    {searchLoading && <span style={{ fontSize:12, color:'#6b7280' }}>⏳</span>}
+    {globalSearch && (
+      <button onClick={() => { setGlobalSearch(''); setSearchResults([]); setSelectedResult(null); setSelectedPrice(null); }} style={{ background:'none', border:'none', cursor:'pointer', fontSize:16, color:'#9ca3af' }}>×</button>
+    )}
+  </div>
 
+  {searchResults.length > 0 && (
+    <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'#fff', border:'1px solid rgba(0,0,0,0.1)', borderRadius:12, boxShadow:'0 8px 24px rgba(0,0,0,0.12)', zIndex:100, marginTop:4, overflow:'hidden' }}>
+      {searchResults.map((r: any) => (
+        <div key={r.symbol}
+          onClick={() => { fetchSelectedPrice(r.symbol, r.name); setSearchResults([]); setGlobalSearch(r.name); }}
+          style={{ padding:'12px 16px', cursor:'pointer', borderBottom:'1px solid rgba(0,0,0,0.05)', display:'flex', alignItems:'center', justifyContent:'space-between' }}
+          onMouseEnter={e => (e.currentTarget.style.background='#f8f9fc')}
+          onMouseLeave={e => (e.currentTarget.style.background='#fff')}>
+          <div>
+            <div style={{ fontWeight:600, fontSize:13 }}>{r.name}</div>
+            <div style={{ fontSize:11, color:'#6b7280', fontFamily:'DM Mono' }}>{r.symbol} · {r.exchange} · {r.type}</div>
+          </div>
+          <span style={{ fontSize:11, padding:'2px 8px', borderRadius:10, background:r.type==='ETF'?'#dbeafe':r.type==='EQUITY'?'#d1fae5':'#f3f4f6', color:r.type==='ETF'?'#2563eb':r.type==='EQUITY'?'#059669':'#6b7280', fontFamily:'DM Mono', fontWeight:600 }}>
+            {r.type}
+          </span>
+        </div>
+      ))}
+    </div>
+  )}
+
+  {selectedResult && (
+    <div style={{ marginTop:12, background:'#fff', border:'1px solid rgba(99,102,241,0.2)', borderRadius:14, padding:20, boxShadow:'0 2px 8px rgba(99,102,241,0.08)' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
+        <div>
+          <div style={{ fontFamily:'Syne', fontWeight:700, fontSize:18 }}>{selectedResult.name}</div>
+          <div style={{ fontSize:12, color:'#6b7280', fontFamily:'DM Mono', marginTop:2 }}>{selectedResult.symbol}</div>
+        </div>
+        {selectedPriceLoading ? (
+          <div style={{ fontSize:24, color:'#9ca3af' }}>⏳</div>
+        ) : selectedPrice && (
+          <div style={{ textAlign:'right' }}>
+            <div style={{ fontFamily:'Syne', fontWeight:700, fontSize:28, color:'#111827' }}>
+              {selectedPrice.price?.toLocaleString('fr-FR', { minimumFractionDigits:2, maximumFractionDigits:2 })} {selectedPrice.currency}
+            </div>
+            <div style={{ fontSize:13, fontWeight:600, fontFamily:'DM Mono', color:selectedPrice.changePercent>=0?'#059669':'#dc2626' }}>
+              {selectedPrice.changePercent>=0?'+':''}{selectedPrice.changePercent?.toFixed(2)}% auj.
+            </div>
+            <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>{selectedPrice.exchange}</div>
+          </div>
+        )}
+      </div>
+      {selectedPrice && (
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+          <div style={{ background:'#f8f9fc', borderRadius:10, padding:'12px 14px' }}>
+            <div style={{ fontSize:10, color:'#9ca3af', fontFamily:'DM Mono', textTransform:'uppercase', marginBottom:4 }}>Variation du jour</div>
+            <div style={{ fontSize:15, fontWeight:600, fontFamily:'DM Mono', color:selectedPrice.change>=0?'#059669':'#dc2626' }}>
+              {selectedPrice.change>=0?'+':''}{selectedPrice.change?.toFixed(2)} {selectedPrice.currency}
+            </div>
+          </div>
+          <div style={{ background:'#f0fdf8', borderRadius:10, padding:'12px 14px' }}>
+            <div style={{ fontSize:10, color:'#9ca3af', fontFamily:'DM Mono', textTransform:'uppercase', marginBottom:4 }}>Source</div>
+            <div style={{ fontSize:12, color:'#059669', fontWeight:600 }}>✅ Yahoo Finance</div>
+            <div style={{ fontSize:11, color:'#6b7280' }}>Prix vérifié temps réel</div>
+          </div>
+        </div>
+      )}
+      <button onClick={() => { setSelectedResult(null); setSelectedPrice(null); setGlobalSearch(''); }} style={{ marginTop:12, background:'none', border:'1px solid rgba(0,0,0,0.1)', borderRadius:8, padding:'6px 14px', fontSize:12, cursor:'pointer', color:'#6b7280', fontFamily:'DM Sans' }}>
+        Fermer ×
+      </button>
+    </div>
+  )}
+</div>
         {/* ══ TAB: NEWS ══ */}
         {activeTab === 'news' && (
           <div>
