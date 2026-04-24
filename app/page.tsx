@@ -62,6 +62,12 @@ export default function InvestBoard() {
   const [assets, setAssets] = useState<any[]>([])
   const [assetsLoading, setAssetsLoading] = useState(true)
   const [addingAsset, setAddingAsset] = useState(false)
+  const [valuationFile, setValuationFile] = useState<File | null>(null)
+  const [valuationPrice, setValuationPrice] = useState("")
+  const [valuationCurrency, setValuationCurrency] = useState("USD")
+  const [valuationLoading, setValuationLoading] = useState(false)
+  const [valuation, setValuation] = useState<any>(null)
+  const [valuationError, setValuationError] = useState("")
 
   useEffect(() => {
     const saved = localStorage.getItem('ib_portfolio')
@@ -182,6 +188,23 @@ export default function InvestBoard() {
     setAddingAsset(false)
   }
 
+  const analyzeValuation = async () => {
+    if (!valuationFile) return
+    setValuationLoading(true)
+    setValuationError("")
+    try {
+      const formData = new FormData()
+      formData.append("file", valuationFile)
+      formData.append("currentPrice", valuationPrice)
+      formData.append("currency", valuationCurrency)
+      const res = await fetch("/api/valuation", { method: "POST", body: formData })
+      const data = await res.json()
+      if (data.valuation) setValuation(data.valuation)
+      else setValuationError(data.error || "Erreur inconnue")
+    } catch(e) { setValuationError("Erreur de connexion") }
+    setValuationLoading(false)
+  }
+
   const fetchSignalReason = async (asset: typeof ASSETS[0]) => {
     if (signalReasons[asset.id] || signalLoading[asset.id]) return
     setSignalLoading(prev => ({ ...prev, [asset.id]: true }))
@@ -265,7 +288,7 @@ export default function InvestBoard() {
 
         {/* NAV TABS */}
         <div style={{ display:'flex', borderBottom:'2px solid rgba(0,0,0,0.07)', marginBottom:24, overflowX:'auto' }}>
-          {[['market','📈 Marché'],['portfolio','💼 Mon Portfolio'],['simulator','🧮 Simulateur DCA'],['news','📰 Actualités']].map(([id,label]) => (
+          {[['market','📈 Marché'],['portfolio','💼 Mon Portfolio'],['simulator','🧮 Simulateur DCA'],['news','📰 Actualités'],['valuation','📊 Valorisation']].map(([id,label]) => (
             <button key={id} onClick={() => setActiveTab(id)} style={{ padding:'12px 20px', fontSize:13, fontWeight:activeTab===id?600:500, cursor:'pointer', border:'none', background:'none', color:activeTab===id?'#6366f1':'#6b7280', borderBottom:activeTab===id?'2px solid #6366f1':'2px solid transparent', marginBottom:-2, whiteSpace:'nowrap', fontFamily:'DM Sans' }}>
               {label}
             </button>
@@ -726,6 +749,245 @@ export default function InvestBoard() {
     </div>
   )}
 </div>
+{/* ══ TAB: VALORISATION ══ */}
+{activeTab === 'valuation' && (
+  <div>
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+      <div>
+        <div style={{ fontFamily:'Syne', fontSize:18, fontWeight:700 }}>📊 Valorisation d'entreprise</div>
+        <div style={{ fontSize:13, color:'#6b7280', marginTop:4 }}>Uploadez un rapport annuel (PDF) pour obtenir une valorisation DCF + multiples comparables générée par IA</div>
+      </div>
+    </div>
+
+    {/* Upload zone */}
+    <div style={{ background:'#fff', border:'2px dashed rgba(99,102,241,0.3)', borderRadius:16, padding:32, marginBottom:20, textAlign:'center' }}>
+      <div style={{ fontSize:40, marginBottom:12 }}>📄</div>
+      <div style={{ fontFamily:'Syne', fontSize:15, fontWeight:700, marginBottom:6 }}>Déposez votre rapport annuel ici</div>
+      <div style={{ fontSize:12, color:'#6b7280', marginBottom:20 }}>Formats acceptés : PDF — Rapport annuel, 10-K, Document de référence AMF</div>
+      <input
+        type="file"
+        accept=".pdf"
+        onChange={e => { setValuationFile(e.target.files?.[0] || null); setValuation(null); setValuationError(''); }}
+        style={{ display:'none' }}
+        id="pdf-upload"
+      />
+      <label htmlFor="pdf-upload" style={{ display:'inline-block', background:'#6366f1', color:'#fff', borderRadius:10, padding:'10px 24px', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans' }}>
+        Choisir un fichier PDF
+      </label>
+      {valuationFile && (
+        <div style={{ marginTop:16, padding:'10px 16px', background:'#f0fdf8', border:'1px solid rgba(5,150,105,0.2)', borderRadius:10, display:'inline-flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:16 }}>✅</span>
+          <span style={{ fontSize:13, fontWeight:600, color:'#059669' }}>{valuationFile.name}</span>
+          <span style={{ fontSize:12, color:'#6b7280' }}>({Math.round(valuationFile.size / 1024)} Ko)</span>
+        </div>
+      )}
+    </div>
+
+    {/* Prix actuel */}
+    {valuationFile && (
+      <div style={{ background:'#fff', border:'1px solid rgba(0,0,0,0.07)', borderRadius:15, padding:20, marginBottom:20, boxShadow:'0 1px 3px rgba(0,0,0,0.08)' }}>
+        <div style={{ fontFamily:'Syne', fontSize:14, fontWeight:700, marginBottom:14 }}>📈 Prix actuel de l'action</div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 120px auto', gap:10, alignItems:'end' }}>
+          <div>
+            <div style={{ fontSize:11, color:'#6b7280', fontWeight:500, marginBottom:4 }}>Prix actuel (optionnel mais recommandé)</div>
+            <input
+              type="number"
+              value={valuationPrice}
+              onChange={e => setValuationPrice(e.target.value)}
+              placeholder="ex: 271.10"
+              style={{ width:'100%', border:'1px solid rgba(0,0,0,0.13)', borderRadius:8, padding:'8px 12px', fontSize:13, fontFamily:'DM Sans', color:'#111827' }}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize:11, color:'#6b7280', fontWeight:500, marginBottom:4 }}>Devise</div>
+            <select value={valuationCurrency} onChange={e => setValuationCurrency(e.target.value)} style={{ width:'100%', border:'1px solid rgba(0,0,0,0.13)', borderRadius:8, padding:'8px 12px', fontSize:13, fontFamily:'DM Sans', color:'#111827', background:'#fff' }}>
+              {['USD','EUR','GBP','CHF','DKK','SEK','JPY','CAD'].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <button
+            onClick={analyzeValuation}
+            disabled={valuationLoading}
+            style={{ background: valuationLoading ? '#e5e7eb' : '#6366f1', color: valuationLoading ? '#6b7280' : '#fff', border:'none', borderRadius:10, padding:'9px 20px', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans', whiteSpace:'nowrap' }}>
+            {valuationLoading ? '⏳ Analyse en cours...' : '🤖 Lancer la valorisation'}
+          </button>
+        </div>
+        {valuationLoading && (
+          <div style={{ marginTop:12, fontSize:12, color:'#6b7280', fontStyle:'italic' }}>
+            ⏳ Claude analyse le document et calcule la valorisation... Cette opération peut prendre 30-60 secondes.
+          </div>
+        )}
+        {valuationError && (
+          <div style={{ marginTop:12, padding:'10px 14px', background:'#fff5f5', border:'1px solid rgba(220,38,38,0.2)', borderRadius:8, fontSize:12, color:'#dc2626' }}>
+            ❌ {valuationError}
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* Résultats */}
+    {valuation && (
+      <div>
+        {/* Header entreprise */}
+        <div style={{ background:'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)', borderRadius:16, padding:24, marginBottom:20, color:'#fff' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
+            <div>
+              <div style={{ fontFamily:'Syne', fontSize:22, fontWeight:800 }}>{valuation.company?.name}</div>
+              <div style={{ fontSize:13, opacity:0.8, marginTop:4 }}>{valuation.company?.ticker} · {valuation.company?.sector} · {valuation.company?.country}</div>
+              <div style={{ fontSize:12, opacity:0.7, marginTop:2 }}>Année fiscale {valuation.company?.fiscalYear}</div>
+            </div>
+            <div style={{ textAlign:'right' }}>
+              <div style={{ fontSize:11, opacity:0.7, marginBottom:2 }}>SIGNAL</div>
+              <div style={{ fontFamily:'Syne', fontSize:24, fontWeight:800, padding:'6px 16px', borderRadius:12, background: valuation.synthesis?.signal === 'ACHETER' ? 'rgba(5,150,105,0.3)' : valuation.synthesis?.signal === 'VENDRE' ? 'rgba(220,38,38,0.3)' : 'rgba(255,255,255,0.2)' }}>
+                {valuation.synthesis?.signal === 'ACHETER' ? '📥 ACHETER' : valuation.synthesis?.signal === 'VENDRE' ? '📤 VENDRE' : '🔄 CONSERVER'}
+              </div>
+              <div style={{ fontSize:12, opacity:0.8, marginTop:4 }}>Conviction : {valuation.synthesis?.conviction}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Synthèse prix */}
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
+          {[
+            { label:'Prix actuel', value: valuationPrice ? `${parseFloat(valuationPrice).toFixed(2)} ${valuationCurrency}` : '—', color:'#6b7280' },
+            { label:'Juste valeur pondérée', value: valuation.synthesis?.weightedFairValue ? `${valuation.synthesis.weightedFairValue} ${valuationCurrency}` : '—', color:'#6366f1' },
+            { label:'Potentiel', value: valuation.synthesis?.upside || '—', color: valuation.synthesis?.upside?.startsWith('+') ? '#059669' : '#dc2626' },
+            { label:'Marge de sécurité', value: valuation.synthesis?.margin || '—', color:'#7c3aed' },
+          ].map(c => (
+            <div key={c.label} style={{ background:'#fff', border:'1px solid rgba(0,0,0,0.07)', borderRadius:13, padding:'14px 16px', boxShadow:'0 1px 3px rgba(0,0,0,0.08)', textAlign:'center' }}>
+              <div style={{ fontSize:10, textTransform:'uppercase', letterSpacing:'.08em', color:'#6b7280', marginBottom:6, fontFamily:'DM Mono' }}>{c.label}</div>
+              <div style={{ fontFamily:'Syne', fontSize:18, fontWeight:700, color:c.color }}>{c.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Données financières */}
+        <div style={{ background:'#fff', border:'1px solid rgba(0,0,0,0.07)', borderRadius:15, padding:20, marginBottom:20, boxShadow:'0 1px 3px rgba(0,0,0,0.08)' }}>
+          <div style={{ fontFamily:'Syne', fontSize:14, fontWeight:700, marginBottom:16 }}>📋 Données financières extraites</div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
+            {[
+              { label:'Chiffre d\'affaires', value: valuation.financials?.revenue ? `${valuation.financials.revenue}M` : '—' },
+              { label:'Croissance CA', value: valuation.financials?.revenueGrowth || '—' },
+              { label:'EBITDA', value: valuation.financials?.ebitda ? `${valuation.financials.ebitda}M` : '—' },
+              { label:'Marge EBITDA', value: valuation.financials?.ebitdaMargin || '—' },
+              { label:'Free Cash Flow', value: valuation.financials?.freeCashFlow ? `${valuation.financials.freeCashFlow}M` : '—' },
+              { label:'Dette nette', value: valuation.financials?.netDebt ? `${valuation.financials.netDebt}M` : '—' },
+              { label:'Résultat net', value: valuation.financials?.netIncome ? `${valuation.financials.netIncome}M` : '—' },
+              { label:'Actions en circulation', value: valuation.financials?.sharesOutstanding ? `${valuation.financials.sharesOutstanding}M` : '—' },
+            ].map(s => (
+              <div key={s.label} style={{ background:'#f8f9fc', borderRadius:10, padding:'10px 12px' }}>
+                <div style={{ fontSize:10, color:'#9ca3af', fontFamily:'DM Mono', textTransform:'uppercase', marginBottom:4 }}>{s.label}</div>
+                <div style={{ fontSize:14, fontWeight:600, fontFamily:'DM Mono', color:'#111827' }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* DCF */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20, marginBottom:20 }}>
+          <div style={{ background:'#fff', border:'1px solid rgba(0,0,0,0.07)', borderRadius:15, padding:20, boxShadow:'0 1px 3px rgba(0,0,0,0.08)' }}>
+            <div style={{ fontFamily:'Syne', fontSize:14, fontWeight:700, marginBottom:16 }}>📈 Valorisation DCF</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:16 }}>
+              <div style={{ background:'#f8f9fc', borderRadius:8, padding:'8px 10px' }}>
+                <div style={{ fontSize:10, color:'#9ca3af', fontFamily:'DM Mono', textTransform:'uppercase', marginBottom:2 }}>WACC</div>
+                <div style={{ fontSize:14, fontWeight:600, fontFamily:'DM Mono' }}>{valuation.dcfValuation?.wacc}</div>
+              </div>
+              <div style={{ background:'#f8f9fc', borderRadius:8, padding:'8px 10px' }}>
+                <div style={{ fontSize:10, color:'#9ca3af', fontFamily:'DM Mono', textTransform:'uppercase', marginBottom:2 }}>Taux terminal</div>
+                <div style={{ fontSize:14, fontWeight:600, fontFamily:'DM Mono' }}>{valuation.dcfValuation?.terminalGrowthRate}</div>
+              </div>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              {valuation.dcfValuation?.projectedFCF?.map((fcf: any, i: number) => (
+                <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid rgba(0,0,0,0.05)', fontSize:12 }}>
+                  <span style={{ color:'#6b7280' }}>{fcf.year}</span>
+                  <span style={{ fontFamily:'DM Mono', fontWeight:600 }}>{fcf.fcf}M</span>
+                  <span style={{ color:'#059669', fontFamily:'DM Mono' }}>{fcf.growthRate}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+              {[
+                { label:'Pessimiste', val: valuation.dcfValuation?.scenarios?.pessimistic?.intrinsicValue, up: valuation.dcfValuation?.scenarios?.pessimistic?.upside, color:'#dc2626', bg:'#fff5f5' },
+                { label:'Base', val: valuation.dcfValuation?.scenarios?.base?.intrinsicValue, up: valuation.dcfValuation?.scenarios?.base?.upside, color:'#6366f1', bg:'#f5f3ff' },
+                { label:'Optimiste', val: valuation.dcfValuation?.scenarios?.optimistic?.intrinsicValue, up: valuation.dcfValuation?.scenarios?.optimistic?.upside, color:'#059669', bg:'#f0fdf8' },
+              ].map(s => (
+                <div key={s.label} style={{ background:s.bg, borderRadius:10, padding:'10px', textAlign:'center' }}>
+                  <div style={{ fontSize:10, color:s.color, fontWeight:600, marginBottom:4 }}>{s.label}</div>
+                  <div style={{ fontSize:15, fontWeight:700, fontFamily:'Syne', color:s.color }}>{s.val} {valuationCurrency}</div>
+                  <div style={{ fontSize:11, color:s.color, fontFamily:'DM Mono' }}>{s.up}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Multiples */}
+          <div style={{ background:'#fff', border:'1px solid rgba(0,0,0,0.07)', borderRadius:15, padding:20, boxShadow:'0 1px 3px rgba(0,0,0,0.08)' }}>
+            <div style={{ fontFamily:'Syne', fontSize:14, fontWeight:700, marginBottom:16 }}>📊 Valorisation par multiples</div>
+            {[
+              { label:'P/E actuel vs secteur', val1: valuation.multiplesValuation?.currentPE, val2: valuation.multiplesValuation?.sectorAveragePE },
+              { label:'EV/EBITDA actuel vs secteur', val1: valuation.multiplesValuation?.currentEVEBITDA, val2: valuation.multiplesValuation?.sectorAverageEVEBITDA },
+              { label:'P/B', val1: valuation.multiplesValuation?.currentPB, val2: null },
+              { label:'P/S', val1: valuation.multiplesValuation?.currentPS, val2: null },
+            ].map(m => (
+              <div key={m.label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid rgba(0,0,0,0.05)' }}>
+                <span style={{ fontSize:12, color:'#6b7280' }}>{m.label}</span>
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  <span style={{ fontFamily:'DM Mono', fontSize:13, fontWeight:600 }}>{m.val1}x</span>
+                  {m.val2 && <span style={{ fontSize:11, color:'#9ca3af' }}>vs {m.val2}x moy.</span>}
+                </div>
+              </div>
+            ))}
+            <div style={{ marginTop:14, padding:'12px', background:'#f5f3ff', borderRadius:10, textAlign:'center' }}>
+              <div style={{ fontSize:11, color:'#7c3aed', marginBottom:4 }}>Valeur implicite moyenne (multiples)</div>
+              <div style={{ fontFamily:'Syne', fontSize:20, fontWeight:700, color:'#7c3aed' }}>{valuation.multiplesValuation?.averageImpliedValue} {valuationCurrency}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Résumé exécutif */}
+        <div style={{ background:'#fff', border:'1px solid rgba(0,0,0,0.07)', borderRadius:15, padding:20, marginBottom:20, boxShadow:'0 1px 3px rgba(0,0,0,0.08)' }}>
+          <div style={{ fontFamily:'Syne', fontSize:14, fontWeight:700, marginBottom:16 }}>📝 Résumé exécutif</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+            {[
+              { title:'✅ Forces', items: valuation.executiveSummary?.strengths, color:'#059669', bg:'#f0fdf8' },
+              { title:'⚠️ Faiblesses', items: valuation.executiveSummary?.weaknesses, color:'#d97706', bg:'#fffbeb' },
+              { title:'🚀 Opportunités', items: valuation.executiveSummary?.opportunities, color:'#6366f1', bg:'#f5f3ff' },
+              { title:'⛔ Risques', items: valuation.executiveSummary?.risks, color:'#dc2626', bg:'#fff5f5' },
+            ].map(section => (
+              <div key={section.title} style={{ background:section.bg, borderRadius:12, padding:'14px 16px' }}>
+                <div style={{ fontSize:12, fontWeight:700, color:section.color, marginBottom:8 }}>{section.title}</div>
+                {section.items?.map((item: string, i: number) => (
+                  <div key={i} style={{ fontSize:12, color:'#374151', lineHeight:1.6, marginBottom:4 }}>• {item}</div>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div style={{ padding:'14px 16px', background:'rgba(99,102,241,0.05)', borderRadius:12, border:'1px solid rgba(99,102,241,0.15)', marginBottom:12 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:'#6366f1', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:6 }}>Thèse d'investissement</div>
+            <div style={{ fontSize:13, color:'#374151', lineHeight:1.8 }}>{valuation.executiveSummary?.investmentThesis}</div>
+          </div>
+          <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+            <div style={{ flex:1, padding:'10px 14px', background:'#f8f9fc', borderRadius:10 }}>
+              <div style={{ fontSize:10, color:'#9ca3af', fontFamily:'DM Mono', textTransform:'uppercase', marginBottom:4 }}>Métriques clés à surveiller</div>
+              <div style={{ fontSize:12, color:'#374151' }}>{valuation.executiveSummary?.keyMetrics}</div>
+            </div>
+            <div style={{ padding:'10px 14px', background:'#f8f9fc', borderRadius:10, textAlign:'center', minWidth:150 }}>
+              <div style={{ fontSize:10, color:'#9ca3af', fontFamily:'DM Mono', textTransform:'uppercase', marginBottom:4 }}>Prix cible {valuation.executiveSummary?.targetHorizon}</div>
+              <div style={{ fontFamily:'Syne', fontSize:18, fontWeight:700, color:'#6366f1' }}>{valuation.executiveSummary?.targetPrice} {valuationCurrency}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bouton supprimer */}
+        <div style={{ textAlign:'center', marginBottom:20 }}>
+          <button onClick={() => { setValuation(null); setValuationFile(null); setValuationPrice(''); }} style={{ background:'none', border:'1px solid rgba(220,38,38,0.3)', borderRadius:10, padding:'8px 20px', fontSize:12, color:'#dc2626', cursor:'pointer', fontFamily:'DM Sans' }}>
+            🗑️ Supprimer cette analyse
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+)}
         {/* ══ TAB: NEWS ══ */}
         {activeTab === 'news' && (
           <div>
