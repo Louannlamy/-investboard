@@ -62,7 +62,7 @@ export default function InvestBoard() {
   const [assets, setAssets] = useState<any[]>([])
   const [assetsLoading, setAssetsLoading] = useState(true)
   const [addingAsset, setAddingAsset] = useState(false)
-  const [valuationFile, setValuationFile] = useState(null)
+  const [valuationFile, setValuationFile] = useState<File | null>(null)
   const [valuationPrice, setValuationPrice] = useState("")
   const [valuationCurrency, setValuationCurrency] = useState("USD")
   const [valuationLoading, setValuationLoading] = useState(false)
