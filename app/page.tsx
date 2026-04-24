@@ -396,10 +396,6 @@ export default function InvestBoard() {
 
                                   {/* AI reason if available */}
                                   <div style={{ padding:"10px 14px", background:"rgba(99,102,241,0.06)", borderRadius:10, border:"1px solid rgba(99,102,241,0.15)", fontSize:12, color:"#6366f1", lineHeight:1.7, marginTop:12 }}><strong>💡 Pourquoi ce signal ?</strong><br/>{signalLoading[asset.id] ? (<span style={{ color:"#9ca3af", fontStyle:"italic" }}>⏳ Analyse en cours...</span>) : signalReasons[asset.id] ? (signalReasons[asset.id]) : (<span style={{ color:"#9ca3af", fontStyle:"italic" }}>Chargement...</span>)}</div>
-                                    <div style={{ padding:'10px 14px', background:'rgba(99,102,241,0.06)', borderRadius:10, border:'1px solid rgba(99,102,241,0.15)', fontSize:12, color:'#6366f1', fontStyle:'italic' }}>
-                                      🤖 <strong>Analyse IA du jour :</strong> {analysis.assetSignals[asset.id].reason}
-                                    </div>
-                                  )}
                                 </div>
                               </td>
                             </tr>
