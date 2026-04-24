@@ -985,7 +985,7 @@ export default function InvestBoard() {
 
         {/* Bouton supprimer */}
         <div style={{ textAlign:'center', marginBottom:20 }}>
-          <button onClick={() => { setValuation(null); setValuationFile(null); setValuationPrice(''); }} style={{ background:'none', border:'1px solid rgba(220,38,38,0.3)', borderRadius:10, padding:'8px 20px', fontSize:12, color:'#dc2626', cursor:'pointer', fontFamily:'DM Sans' }}>
+          <button onClick={() => { setValuation(null); setValuationUrl(''); setValuationPrice(''); }} style={{ background:'none', border:'1px solid rgba(220,38,38,0.3)', borderRadius:10, padding:'8px 20px', fontSize:12, color:'#dc2626', cursor:'pointer', fontFamily:'DM Sans' }}>
             🗑️ Supprimer cette analyse
           </button>
         </div>
