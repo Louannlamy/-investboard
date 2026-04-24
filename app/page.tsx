@@ -66,6 +66,7 @@ export default function InvestBoard() {
   useEffect(() => {
     const saved = localStorage.getItem('ib_portfolio')
     if (saved) setPortfolio(JSON.parse(saved))
+    fetchAssets()
     fetchPrices()
     fetchNews()
   }, [])
