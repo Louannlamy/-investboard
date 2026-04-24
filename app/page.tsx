@@ -29,38 +29,175 @@ const ASSETS = [
 
 type Price = { price: number; change: number; changePercent: number }
 type Signal = 'buy' | 'hold' | 'sell'
-type PortfolioPosition = { assetId: string; qty: number; buyPrice: number; date: string }'use client'
+type PortfolioPosition = { assetId: string; qty: number; buyPrice: number; date: string }
+export default function InvestBoard() {
+  const [activeTab, setActiveTab] = useState('market')
+  const [prices, setPrices] = useState<Record<string, Price>>({})
+  const [news, setNews] = useState<any[]>([])
+  const [analysis, setAnalysis] = useState<any>(null)
+  const [analysisLoading, setAnalysisLoading] = useState(false)
+  const [pricesLoading, setPricesLoading] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<string>('')
+  const [curCat, setCurCat] = useState('all')
+  const [peaMode, setPeaMode] = useState(false)
+  const [expandedAsset, setExpandedAsset] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [portfolio, setPortfolio] = useState<PortfolioPosition[]>([])
+  const [posAsset, setPosAsset] = useState('IWDA')
+  const [posQty, setPosQty] = useState('')
+  const [posBuyPrice, setPosBuyPrice] = useState('')
+  const [posDate, setPosDate] = useState('')
+  const [simInit, setSimInit] = useState(1000)
+  const [simMonthly, setSimMonthly] = useState(200)
+  const [simYears, setSimYears] = useState(20)
+  const [simRate, setSimRate] = useState(11.5)
 
-import { useState, useEffect, useCallback } from 'react'
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler } from 'chart.js'
-import { Line } from 'react-chartjs-2'
+  useEffect(() => {
+    const saved = localStorage.getItem('ib_portfolio')
+    if (saved) setPortfolio(JSON.parse(saved))
+    fetchPrices()
+    fetchNews()
+  }, [])
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler)
+  const fetchPrices = async () => {
+    setPricesLoading(true)
+    try {
+      const res = await fetch('/api/prices')
+      const data = await res.json()
+      if (data.prices) {
+        setPrices(data.prices)
+        setLastUpdated(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
+      }
+    } catch (e) { console.error(e) }
+    setPricesLoading(false)
+  }
 
-const ASSETS = [
-  { id:'IWDA', name:'iShares Core MSCI World UCITS', cat:'low', pea:true, peaAlt:null, what:'ETF UCITS répliquant 1 500 grandes entreprises dans 23 pays développés (USA 70%, Europe, Japon). BlackRock. Frais 0.20%/an.', p10:9.8, p15:10.2, pe:'19.8x', ytd:'+6.1%', maxDD:'-32%', vol:'Faible', sharpe:'0.72' },
-  { id:'VWCE', name:'Vanguard FTSE All-World UCITS', cat:'low', pea:true, peaAlt:null, what:'~3 700 actions couvrant 90% de la capitalisation mondiale (développés + émergents). Vanguard. Frais 0.22%/an.', p10:10.1, p15:null, pe:'18.4x', ytd:'+6.4%', maxDD:'-33%', vol:'Faible', sharpe:'0.74' },
-  { id:'ERNS', name:'Amundi ETF Overnight €STR', cat:'low', pea:true, peaAlt:null, what:'ETF monétaire euros répliquant les dépôts overnight zone euro. Équivalent institutionnel d\'un livret. Amundi. Frais 0.10%/an.', p10:1.8, p15:1.6, pe:'—', ytd:'+1.4%', maxDD:'-0.5%', vol:'Quasi-nulle', sharpe:'0.95' },
-  { id:'AGG', name:'iShares Core US Agg Bond', cat:'low', pea:false, peaAlt:'IEAG', what:'ETF obligataire US diversifié. Stabilisateur de portefeuille. Non éligible PEA — équivalent: IEAG. BlackRock. Frais 0.03%/an.', p10:2.1, p15:2.8, pe:'—', ytd:'+1.2%', maxDD:'-18%', vol:'Très faible', sharpe:'0.45' },
-  { id:'SPY', name:'SPDR S&P 500 ETF', cat:'mid', pea:false, peaAlt:'CSP1', what:'Le plus grand ETF au monde — les 500 plus grandes entreprises US. Non éligible PEA — équivalent: CSP1. State Street. Frais 0.09%/an.', p10:13.2, p15:14.1, pe:'22.4x', ytd:'+8.4%', maxDD:'-34%', vol:'Modérée', sharpe:'0.88' },
-  { id:'QQQ', name:'Invesco NASDAQ-100 ETF', cat:'mid', pea:false, peaAlt:'EQQQ', what:'Top 100 entreprises non-financières du NASDAQ. Très concentré tech. Non éligible PEA — équivalent: EQQQ. Frais 0.20%/an.', p10:17.8, p15:18.3, pe:'28.1x', ytd:'+10.2%', maxDD:'-38%', vol:'Modérée', sharpe:'0.81' },
-  { id:'VIG', name:'Vanguard Dividend Appreciation', cat:'mid', pea:false, peaAlt:'VGWD', what:'ETF concentré sur les entreprises qui augmentent leurs dividendes depuis 10+ ans. Non éligible PEA — équivalent: VGWD. Frais 0.06%/an.', p10:11.4, p15:12.1, pe:'21.3x', ytd:'+7.2%', maxDD:'-28%', vol:'Modérée', sharpe:'0.86' },
-  { id:'HLTH', name:'iShares Healthcare Innovation UCITS', cat:'mid', pea:true, peaAlt:null, what:'ETF santé mondial UCITS. Eli Lilly, Novo Nordisk, biotech. Éligible PEA directement. BlackRock. Frais 0.25%/an.', p10:10.4, p15:11.2, pe:'17.8x', ytd:'+4.8%', maxDD:'-26%', vol:'Modérée', sharpe:'0.76' },
-  { id:'MSCI', name:'MSCI Inc.', cat:'mid', pea:false, peaAlt:null, what:'Fournisseur d\'indices boursiers mondiaux. Quasi-monopole. Modèle abonnements ultra-récurrents. Siège USA — CTO uniquement.', p10:22.8, p15:null, pe:'37.2x', ytd:'+9.1%', maxDD:'-40%', vol:'Modérée', sharpe:'0.92' },
-  { id:'NVDA', name:'NVIDIA Corporation', cat:'high', pea:false, peaAlt:'SEMI', what:'Leader mondial des puces GPU pour l\'IA. Ses puces équipent OpenAI, Google, Microsoft. Siège USA — non PEA. Équivalent PEA: SEMI.', p10:58.2, p15:44.1, pe:'52.3x', ytd:'+18.4%', maxDD:'-66%', vol:'Très élevée', sharpe:'1.12' },
-  { id:'MSFT', name:'Microsoft Corporation', cat:'high', pea:false, peaAlt:'EQQQ', what:'Azure cloud, Office 365, IA via OpenAI (Copilot). Siège USA — non PEA. Via PEA: EQQQ donne ~8% expo Microsoft.', p10:29.1, p15:23.4, pe:'33.8x', ytd:'+7.8%', maxDD:'-38%', vol:'Élevée', sharpe:'0.98' },
-  { id:'ASML', name:'ASML Holding', cat:'high', pea:true, peaAlt:null, what:'Monopole mondial machines lithographie EUV. Sans ASML, pas de puces NVIDIA ni Apple Silicon. Siège Pays-Bas — ÉLIGIBLE PEA.', p10:31.4, p15:28.7, pe:'38.2x', ytd:'+12.4%', maxDD:'-55%', vol:'Élevée', sharpe:'0.88' },
-  { id:'NOVO', name:'Novo Nordisk', cat:'high', pea:true, peaAlt:null, what:'N°1 mondial insuline & obésité (Ozempic, Wegovy). A été la 1ère capitalisation d\'Europe. Siège Danemark — ÉLIGIBLE PEA.', p10:25.4, p15:22.8, pe:'24.8x', ytd:'-8.4%', maxDD:'-50%', vol:'Élevée', sharpe:'0.84' },
-  { id:'SEMI', name:'iShares MSCI Global Semiconductors UCITS', cat:'high', pea:true, peaAlt:null, what:'ETF semis UCITS — NVIDIA, TSMC, Broadcom, AMD... 30 valeurs. Éligible PEA. BlackRock. Frais 0.35%/an.', p10:26.8, p15:23.1, pe:'28.4x', ytd:'+14.2%', maxDD:'-60%', vol:'Très élevée', sharpe:'0.79' },
-  { id:'VWO', name:'iShares Core MSCI Emerging Markets UCITS', cat:'high', pea:true, peaAlt:null, what:'Marchés émergents UCITS — Inde (22%), Chine (25%), Taiwan... 2600+ actions. Éligible PEA. BlackRock. Frais 0.18%/an.', p10:4.2, p15:5.8, pe:'12.4x', ytd:'+7.1%', maxDD:'-52%', vol:'Élevée', sharpe:'0.41' },
-  { id:'LVMH', name:'LVMH Moët Hennessy', cat:'high', pea:true, peaAlt:null, what:'N°1 mondial luxe. Louis Vuitton, Dior, Sephora, Bulgari... 75 maisons. Siège Paris — ÉLIGIBLE PEA directement.', p10:18.4, p15:19.2, pe:'21.4x', ytd:'+3.2%', maxDD:'-45%', vol:'Élevée', sharpe:'0.74' },
-  { id:'IBIT', name:'iShares Bitcoin Trust ETF', cat:'high', pea:false, peaAlt:null, what:'ETF Bitcoin spot BlackRock. Détient directement du Bitcoin. Domicilié USA — non PEA. CTO uniquement. Frais 0.25%/an.', p10:null, p15:null, pe:'—', ytd:'+22.4%', maxDD:'-75%', vol:'Extrême', sharpe:'0.62' },
-  { id:'ARKK', name:'ARK Innovation ETF', cat:'high', pea:false, peaAlt:null, what:'ETF actif Cathie Wood. Disruptif mais sous-performance chronique depuis 2021. Frais très élevés 0.75%/an. Non PEA.', p10:4.1, p15:null, pe:'—', ytd:'-8.2%', maxDD:'-80%', vol:'Extrême', sharpe:'0.24' },
-]
+  const fetchNews = async () => {
+    try {
+      const res = await fetch('/api/news')
+      const data = await res.json()
+      if (data.articles) setNews(data.articles)
+    } catch (e) { console.error(e) }
+  }
 
-type Price = { price: number; change: number; changePercent: number }
-type Signal = 'buy' | 'hold' | 'sell'
-type PortfolioPosition = { assetId: string; qty: number; buyPrice: number; date: string }{/* ══ TAB: MARCHÉ ══ */}
+  const fetchAnalysis = useCallback(async () => {
+    setAnalysisLoading(true)
+    try {
+      const res = await fetch('/api/analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prices, news, portfolio }),
+      })
+      const data = await res.json()
+      if (data.analysis) setAnalysis(data.analysis)
+    } catch (e) { console.error(e) }
+    setAnalysisLoading(false)
+  }, [prices, news, portfolio])
+
+  const savePortfolio = (p: PortfolioPosition[]) => {
+    setPortfolio(p)
+    localStorage.setItem('ib_portfolio', JSON.stringify(p))
+  }
+
+  const addPosition = () => {
+    if (!posQty || !posBuyPrice) return
+    savePortfolio([...portfolio, { assetId: posAsset, qty: parseFloat(posQty), buyPrice: parseFloat(posBuyPrice), date: posDate || new Date().toISOString().split('T')[0] }])
+    setPosQty(''); setPosBuyPrice(''); setPosDate('')
+  }
+
+  const removePosition = (idx: number) => savePortfolio(portfolio.filter((_, i) => i !== idx))
+
+  const getSignal = (id: string): Signal => {
+    if (analysis?.assetSignals?.[id]?.signal) return analysis.assetSignals[id].signal
+    const defaults: Record<string, Signal> = { IWDA:'buy',VWCE:'buy',ERNS:'hold',AGG:'hold',SPY:'buy',QQQ:'buy',VIG:'buy',HLTH:'buy',MSCI:'buy',NVDA:'hold',MSFT:'buy',ASML:'buy',NOVO:'buy',SEMI:'buy',VWO:'hold',LVMH:'buy',IBIT:'hold',ARKK:'sell' }
+    return defaults[id] || 'hold'
+  }
+
+  const getPrice = (id: string) => prices[id]?.price || 0
+  const getChange = (id: string) => prices[id]?.changePercent || 0
+
+  const calcDCA = (rate: number, init: number, monthly: number, years: number) => {
+    let v = init
+    const mr = rate / 100 / 12
+    for (let m = 0; m < years * 12; m++) v = v * (1 + mr) + monthly
+    return Math.round(v)
+  }
+
+  const filteredAssets = ASSETS
+    .filter(a => curCat === 'all' || a.cat === curCat)
+    .filter(a => !peaMode || a.pea)
+    .filter(a => !searchQuery || a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.id.toLowerCase().includes(searchQuery.toLowerCase()))
+
+  const today = new Date().toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+
+  const portRows = (() => {
+    const merged: Record<string, { asset: typeof ASSETS[0], positions: PortfolioPosition[] }> = {}
+    portfolio.forEach(p => {
+      const asset = ASSETS.find(a => a.id === p.assetId)
+      if (!asset) return
+      if (!merged[p.assetId]) merged[p.assetId] = { asset, positions: [] }
+      merged[p.assetId].positions.push(p)
+    })
+    return Object.values(merged).map(({ asset, positions }) => {
+      const totalQty = positions.reduce((s, p) => s + p.qty, 0)
+      const avgBuy = positions.reduce((s, p) => s + p.buyPrice * p.qty, 0) / totalQty
+      const currentPrice = getPrice(asset.id) || avgBuy
+      const value = totalQty * currentPrice
+      const invested = totalQty * avgBuy
+      const gain = value - invested
+      const gainPct = (gain / invested) * 100
+      return { asset, totalQty, avgBuy, currentPrice, value, invested, gain, gainPct }
+    })
+  })()
+
+  const totalValue = portRows.reduce((s, r) => s + r.value, 0)
+  const totalInvested = portRows.reduce((s, r) => s + r.invested, 0)
+  const totalGain = totalValue - totalInvested
+  const totalGainPct = totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0
+
+  const SignalBadge = ({ signal }: { signal: Signal }) => (
+    <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, fontWeight:600, fontFamily:'DM Mono', padding:'3px 9px', borderRadius:20, textTransform:'uppercase',
+      background: signal==='buy' ? '#d1fae5' : signal==='sell' ? '#fee2e2' : '#fef3c7',
+      color: signal==='buy' ? '#059669' : signal==='sell' ? '#dc2626' : '#d97706' }}>
+      <span style={{ width:4, height:4, borderRadius:'50%', background:'currentColor' }}></span>
+      {signal==='buy' ? 'Acheter' : signal==='sell' ? 'Vendre' : 'Conserver'}
+    </span>
+  )
+
+  return (
+    <div style={{ fontFamily:"'DM Sans', sans-serif", background:'#fff', minHeight:'100vh', color:'#111827' }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+      <div style={{ maxWidth:1400, margin:'0 auto', padding:'0 24px' }}>
+
+        {/* HEADER */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'18px 0 14px', borderBottom:'1px solid rgba(0,0,0,0.07)', marginBottom:20, flexWrap:'wrap', gap:12 }}>
+          <div style={{ fontFamily:'Syne', fontWeight:800, fontSize:20, display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ width:8, height:8, borderRadius:'50%', background:'#059669', boxShadow:'0 0 0 3px #d1fae5' }}></div>
+            InvestBoard
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+            <div style={{ fontSize:11, color:'#6b7280', fontFamily:'DM Mono', background:'#f8f9fc', border:'1px solid rgba(0,0,0,0.07)', borderRadius:20, padding:'5px 12px' }}>
+              {lastUpdated ? `✅ Mis à jour à ${lastUpdated}` : 'Chargement des cours...'}
+            </div>
+            <button onClick={fetchPrices} disabled={pricesLoading} style={{ background:'#6366f1', color:'#fff', border:'none', borderRadius:8, padding:'6px 14px', fontSize:11, cursor:'pointer', opacity:pricesLoading?0.6:1, fontFamily:'DM Sans' }}>
+              {pricesLoading ? '⏳ Chargement...' : '↺ Actualiser'}
+            </button>
+          </div>
+          <div style={{ fontSize:10, color:'#9ca3af', fontStyle:'italic', textAlign:'right', lineHeight:1.5 }}>
+            À titre informatif uniquement.<br/>Pas un conseil certifié.
+          </div>
+        </div>
+
+        {/* NAV TABS */}
+        <div style={{ display:'flex', borderBottom:'2px solid rgba(0,0,0,0.07)', marginBottom:24, overflowX:'auto' }}>
+          {[['market','📈 Marché'],['portfolio','💼 Mon Portfolio'],['simulator','🧮 Simulateur DCA'],['news','📰 Actualités']].map(([id,label]) => (
+            <button key={id} onClick={() => setActiveTab(id)} style={{ padding:'12px 20px', fontSize:13, fontWeight:activeTab===id?600:500, cursor:'pointer', border:'none', background:'none', color:activeTab===id?'#6366f1':'#6b7280', borderBottom:activeTab===id?'2px solid #6366f1':'2px solid transparent', marginBottom:-2, whiteSpace:'nowrap', fontFamily:'DM Sans' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {/* ══ TAB: MARCHÉ ══ */}
         {activeTab === 'market' && (
           <div>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:10 }}>
