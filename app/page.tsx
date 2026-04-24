@@ -122,26 +122,7 @@ const removeCustomAsset = async (id: string) => {
     setAssetsLoading(false)
   }
 
-  const addAssetFromSearch = async (symbol: string, name: string, exchange: string, type: string) => {
-    setAddingAsset(true)
-    try {
-      const res = await fetch("/api/assets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ symbol, name, exchange, type }) })
-      const data = await res.json()
-      if (data.asset) {
-        setAssets(prev => [...prev.filter((a:any) => a.id !== data.asset.id), data.asset])
-        setGlobalSearch(""); setSearchResults([]); setSelectedResult(null); setSelectedPrice(null)
-        alert("✅ " + name + " ajouté!")
-      }
-    } catch(e) { console.error(e) }
-    setAddingAsset(false)
-  }
 
-  const removeCustomAsset = async (id: string) => {
-    try {
-      await fetch("/api/assets", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
-      setAssets((prev:any) => prev.filter((a:any) => a.id !== id))
-    } catch(e) { console.error(e) }
-  }
 
   const fetchAnalysis = useCallback(async () => {
     setAnalysisLoading(true)
