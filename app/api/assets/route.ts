@@ -26,6 +26,74 @@ const DEFAULT_ASSETS = [
   { id:'ARKK', symbol:'ARKK', name:'ARK Innovation ETF', cat:'high', pea:false, peaAlt:null, what:'ETF actif Cathie Wood. Sous-performance chronique.', p10:4.1, p15:null, pe:'—', ytd:'-8.2%', maxDD:'-80%', vol:'Extrême', sharpe:'0.24', isDefault:true },
 ]
 
+async function fetchYahooDetails(symbol: string) {
+  try {
+    const res = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1y`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } }
+    )
+    const data = await res.json()
+    const result = data?.chart?.result?.[0]
+    if (!result) return null
+
+    const meta = result.meta
+    const price = meta.regularMarketPrice
+    const prevClose = meta.chartPreviousClose || meta.previousClose
+    const high52 = meta.fiftyTwoWeekHigh
+    const low52 = meta.fiftyTwoWeekLow
+    const currency = meta.currency || 'USD'
+
+    // Calcule YTD approximatif
+    const quotes = result.indicators?.quote?.[0]
+    const closes = quotes?.close?.filter((c: number) => c !== null) || []
+    const firstClose = closes[0]
+    const ytdPct = firstClose ? ((price - firstClose) / firstClose * 100) : null
+
+    // Calcule Max Drawdown sur 1 an
+    let maxDD = null
+    if (closes.length > 0) {
+      let peak = closes[0]
+      let maxDrawdown = 0
+      for (const close of closes) {
+        if (close > peak) peak = close
+        const dd = (close - peak) / peak * 100
+        if (dd < maxDrawdown) maxDrawdown = dd
+      }
+      maxDD = Math.round(maxDrawdown * 10) / 10
+    }
+
+    // Calcule volatilité annualisée
+    let vol = '—'
+    if (closes.length > 20) {
+      const returns = closes.slice(1).map((c: number, i: number) => Math.log(c / closes[i]))
+      const mean = returns.reduce((a: number, b: number) => a + b, 0) / returns.length
+      const variance = returns.reduce((a: number, b: number) => a + Math.pow(b - mean, 2), 0) / returns.length
+      const annualVol = Math.sqrt(variance * 252) * 100
+      if (annualVol < 10) vol = 'Très faible'
+      else if (annualVol < 20) vol = 'Faible'
+      else if (annualVol < 30) vol = 'Modérée'
+      else if (annualVol < 45) vol = 'Élevée'
+      else vol = 'Très élevée'
+    }
+
+    return {
+      price,
+      currency,
+      high52,
+      low52,
+      ytdPct: ytdPct ? Math.round(ytdPct * 10) / 10 : null,
+      maxDD,
+      vol,
+      exchange: meta.exchangeName,
+      marketCap: meta.marketCap,
+      trailingPE: meta.trailingPE,
+    }
+  } catch (e) {
+    console.error('Yahoo details error:', e)
+    return null
+  }
+}
+
 export async function GET() {
   try {
     const customAssets = await redis.get<any[]>('custom_assets') || []
@@ -40,41 +108,50 @@ export async function POST(request: Request) {
   try {
     const { symbol, name, exchange, type } = await request.json()
 
-    const priceRes = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`,
-      { headers: { 'User-Agent': 'Mozilla/5.0' } }
-    )
-    const priceData = await priceRes.json()
-    const meta = priceData?.chart?.result?.[0]?.meta
-    if (!meta) return NextResponse.json({ error: 'Actif non trouvé' }, { status: 404 })
+    const details = await fetchYahooDetails(symbol)
+    if (!details) return NextResponse.json({ error: 'Actif non trouvé' }, { status: 404 })
 
-    const price = meta.regularMarketPrice
-    const currency = meta.currency || 'USD'
+    const { price, currency, high52, low52, ytdPct, maxDD, vol, marketCap, trailingPE } = details
+
     const isPEA = ['EUR', 'GBP', 'DKK', 'SEK', 'NOK', 'CHF'].includes(currency) &&
       ['PAR', 'AMS', 'EPA', 'ETR', 'CPH', 'STO', 'VTX', 'LSE', 'FRA'].some(ex =>
         (exchange || '').toUpperCase().includes(ex) ||
-        (meta.exchangeName || '').toUpperCase().includes(ex)
+        (details.exchange || '').toUpperCase().includes(ex)
       )
+
+    const peFormatted = trailingPE ? `${Math.round(trailingPE * 10) / 10}x` : '—'
+    const ytdFormatted = ytdPct !== null ? `${ytdPct >= 0 ? '+' : ''}${ytdPct}%` : '—'
+    const maxDDFormatted = maxDD !== null ? `${maxDD}%` : '—'
+    const high52Formatted = high52 ? `${Math.round(high52 * 100) / 100} ${currency}` : '—'
+    const low52Formatted = low52 ? `${Math.round(low52 * 100) / 100} ${currency}` : '—'
 
     const aiRes = await anthropic.messages.create({
       model: 'claude-opus-4-5',
-      max_tokens: 400,
+      max_tokens: 500,
       messages: [{
         role: 'user',
-        content: `Tu es un analyste financier. Analyse cet actif boursier :
+        content: `Tu es un analyste financier expert. Analyse cet actif boursier avec les vraies données de marché :
+
 Nom: ${name}
 Ticker: ${symbol}
 Prix actuel: ${price} ${currency}
-Bourse: ${exchange || meta.exchangeName}
+P/E Ratio: ${peFormatted}
+YTD (performance depuis début année): ${ytdFormatted}
+Max Drawdown 1 an: ${maxDDFormatted}
+Plus haut 52 semaines: ${high52Formatted}
+Plus bas 52 semaines: ${low52Formatted}
+Volatilité historique: ${vol}
+Capitalisation boursière: ${marketCap ? Math.round(marketCap / 1e9) + ' Mds ' + currency : '—'}
+Bourse: ${exchange || details.exchange}
 Type: ${type}
+Eligibilité PEA estimée: ${isPEA ? 'Oui' : 'Non'}
 
-Réponds en JSON uniquement :
+Réponds en JSON uniquement, sans texte avant ou après :
 {
   "signal": "buy" ou "hold" ou "sell",
   "cat": "low" ou "mid" ou "high",
-  "what": "Description courte de l'actif en 1-2 phrases",
-  "why": "Explication du signal en 2-3 phrases basée sur le prix actuel et les fondamentaux",
-  "pea": ${isPEA}
+  "what": "Description précise de l'actif en 2 phrases",
+  "why": "Explication du signal en 3-4 phrases basée sur TOUTES les données fournies (prix, PE, YTD, drawdown, volatilité, capitalisation)"
 }`
       }]
     })
@@ -83,7 +160,7 @@ Réponds en JSON uniquement :
     const aiData = JSON.parse(text.replace(/```json|```/g, '').trim())
 
     const newAsset = {
-      id: symbol.replace('.', '_'),
+      id: symbol.replace(/[^a-zA-Z0-9]/g, '_'),
       symbol,
       name,
       cat: aiData.cat || 'mid',
@@ -92,10 +169,10 @@ Réponds en JSON uniquement :
       what: aiData.what || name,
       p10: null,
       p15: null,
-      pe: '—',
-      ytd: '—',
-      maxDD: '—',
-      vol: aiData.cat === 'low' ? 'Faible' : aiData.cat === 'mid' ? 'Modérée' : 'Élevée',
+      pe: peFormatted,
+      ytd: ytdFormatted,
+      maxDD: maxDDFormatted,
+      vol,
       sharpe: '—',
       signal: aiData.signal || 'hold',
       why: aiData.why || '',
