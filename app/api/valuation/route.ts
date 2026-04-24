@@ -122,9 +122,17 @@ Analyse ce document en profondeur et génère une valorisation complète en JSON
       }],
     })
 
-    const text = message.content[0].type === 'text' ? message.content[0].text : ''
-    const clean = text.replace(/```json|```/g, '').trim()
-    const valuation = JSON.parse(clean)
+const text = message.content[0].type === 'text' ? message.content[0].text : ''
+let clean = text.replace(/```json|```/g, '').trim()
+
+// Trouve le premier { et le dernier } pour extraire uniquement le JSON
+const firstBrace = clean.indexOf('{')
+const lastBrace = clean.lastIndexOf('}')
+if (firstBrace !== -1 && lastBrace !== -1) {
+  clean = clean.substring(firstBrace, lastBrace + 1)
+}
+
+const valuation = JSON.parse(clean)
 
     return NextResponse.json({ valuation, analyzedAt: new Date().toISOString() })
   } catch (e) {
