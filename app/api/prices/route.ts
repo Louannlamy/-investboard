@@ -19,7 +19,7 @@ const ASSETS = [
   { id: 'ERNS', ticker: 'CSH2.PA', source: 'yahoo' },
   { id: 'HLTH', ticker: 'HEAL.L',  source: 'yahoo' },
   { id: 'ASML', ticker: 'ASML.AS', source: 'yahoo' },
-  { id: 'NOVO', ticker: 'NOVO-B.CO', source: 'yahoo' },
+  { id: 'NOVO', ticker: 'NVO', source: 'finnhub' },
   { id: 'SEMI', ticker: 'SEMI.PA', source: 'yahoo' },
   { id: 'LVMH', ticker: 'MC.PA',  source: 'yahoo' },
 ]
