@@ -62,7 +62,7 @@ export default function InvestBoard() {
   const [assets, setAssets] = useState<any[]>([])
   const [assetsLoading, setAssetsLoading] = useState(true)
   const [addingAsset, setAddingAsset] = useState(false)
-  const [valuationFile, setValuationFile] = useState<File | null>(null)
+  const [valuationUrl, setValuationUrl] = useState('')
   const [valuationPrice, setValuationPrice] = useState("")
   const [valuationCurrency, setValuationCurrency] = useState("USD")
   const [valuationLoading, setValuationLoading] = useState(false)
@@ -189,12 +189,12 @@ export default function InvestBoard() {
   }
 
   const analyzeValuation = async () => {
-    if (!valuationFile) return
+    if (!valuationUrl) return
     setValuationLoading(true)
     setValuationError("")
     try {
       const formData = new FormData()
-      formData.append("file", valuationFile)
+    // url dans body JSON
       formData.append("currentPrice", valuationPrice)
       formData.append("currency", valuationCurrency)
       const res = await fetch("/api/valuation", { method: "POST", body: formData })
@@ -789,7 +789,7 @@ export default function InvestBoard() {
 </div>
 
     {/* Prix actuel */}
-    {valuationFile && (
+    {valuationUrl && (
       <div style={{ background:'#fff', border:'1px solid rgba(0,0,0,0.07)', borderRadius:15, padding:20, marginBottom:20, boxShadow:'0 1px 3px rgba(0,0,0,0.08)' }}>
         <div style={{ fontFamily:'Syne', fontSize:14, fontWeight:700, marginBottom:14 }}>📈 Prix actuel de l'action</div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 120px auto', gap:10, alignItems:'end' }}>
