@@ -194,7 +194,7 @@ export default function InvestBoard() {
     setValuationError('')
     try {
       const pdfjsLib = await import('pdfjs-dist')
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + pdfjsLib.version + '/pdf.worker.min.js'
+      pdfjsLib.GlobalWorkerOptions.workerSrc = ''
       const arrayBuffer = await valuationFile.arrayBuffer()
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
       let fullText = ''
