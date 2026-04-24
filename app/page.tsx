@@ -193,7 +193,7 @@ export default function InvestBoard() {
     setValuationLoading(true)
     setValuationError('')
     try {
-      const pdfjsLib = await import('pdfjs-dist')
+      const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf')
       pdfjsLib.GlobalWorkerOptions.workerSrc = ''
       const arrayBuffer = await valuationFile.arrayBuffer()
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
