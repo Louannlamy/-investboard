@@ -5,67 +5,59 @@ const anthropic = new Anthropic()
 
 export async function POST(request: Request) {
   try {
-    const { url, currentPrice, currency = 'USD' } = await request.json()
+    const { text: pdfText, currentPrice, currency = 'USD' } = await request.json()
 
-    if (!url) return NextResponse.json({ error: 'URL manquante' }, { status: 400 })
-
-    // Convertit Google Drive URL en URL de téléchargement direct
-    let downloadUrl = url
-    const gdrivMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)
-    if (gdrivMatch) {
-      downloadUrl = `https://drive.google.com/uc?export=download&id=${gdrivMatch[1]}`
-    }
-    // Dropbox
-    if (url.includes('dropbox.com')) {
-      downloadUrl = url.replace('?dl=0', '?dl=1').replace('www.dropbox', 'dl.dropboxusercontent')
-    }
+    if (!pdfText) return NextResponse.json({ error: 'Texte du document manquant' }, { status: 400 })
 
     const prompt = `Tu es un analyste financier senior spécialisé en valorisation d'entreprises.
-Tu as reçu un document financier (rapport annuel, 10-K, document de référence AMF ou similaire).
+Voici le contenu extrait d'un document financier (rapport annuel, 10-K, document de référence AMF).
 Le prix actuel de l'action est : ${currentPrice || 'non fourni'} ${currency}
 
-Analyse ce document en profondeur et génère une valorisation complète en JSON uniquement (pas de texte avant ou après) :
+CONTENU DU DOCUMENT :
+${pdfText.substring(0, 15000)}
+
+Analyse ce document et génère une valorisation complète en JSON uniquement (pas de texte avant ou après) :
 
 {
   "company": {
     "name": "Nom de l'entreprise",
-    "ticker": "Ticker boursier",
+    "ticker": "Ticker boursier si mentionné",
     "sector": "Secteur d'activité",
     "country": "Pays",
     "currency": "Devise des états financiers",
     "fiscalYear": "Année fiscale analysée"
   },
   "financials": {
-    "revenue": "Chiffre d'affaires en millions",
-    "revenueGrowth": "Croissance CA en %",
-    "ebitda": "EBITDA en millions",
-    "ebitdaMargin": "Marge EBITDA en %",
-    "ebit": "EBIT en millions",
-    "netIncome": "Résultat net en millions",
-    "freeCashFlow": "Free Cash Flow en millions",
-    "totalDebt": "Dette totale en millions",
-    "cash": "Trésorerie en millions",
-    "netDebt": "Dette nette en millions",
-    "sharesOutstanding": "Nombre d'actions en millions"
+    "revenue": 0,
+    "revenueGrowth": "+X%",
+    "ebitda": 0,
+    "ebitdaMargin": "X%",
+    "ebit": 0,
+    "netIncome": 0,
+    "freeCashFlow": 0,
+    "totalDebt": 0,
+    "cash": 0,
+    "netDebt": 0,
+    "sharesOutstanding": 0
   },
   "dcfValuation": {
-    "wacc": "WACC en %",
-    "terminalGrowthRate": "Taux terminal en %",
+    "wacc": "X%",
+    "terminalGrowthRate": "X%",
     "projectedFCF": [
-      {"year": "An 1", "fcf": 0, "growthRate": "%"},
-      {"year": "An 2", "fcf": 0, "growthRate": "%"},
-      {"year": "An 3", "fcf": 0, "growthRate": "%"},
-      {"year": "An 4", "fcf": 0, "growthRate": "%"},
-      {"year": "An 5", "fcf": 0, "growthRate": "%"}
+      {"year": "An 1", "fcf": 0, "growthRate": "X%"},
+      {"year": "An 2", "fcf": 0, "growthRate": "X%"},
+      {"year": "An 3", "fcf": 0, "growthRate": "X%"},
+      {"year": "An 4", "fcf": 0, "growthRate": "X%"},
+      {"year": "An 5", "fcf": 0, "growthRate": "X%"}
     ],
     "terminalValue": 0,
     "enterpriseValue": 0,
     "equityValue": 0,
     "intrinsicValuePerShare": 0,
     "scenarios": {
-      "pessimistic": {"intrinsicValue": 0, "upside": "%"},
-      "base": {"intrinsicValue": 0, "upside": "%"},
-      "optimistic": {"intrinsicValue": 0, "upside": "%"}
+      "pessimistic": {"intrinsicValue": 0, "upside": "X%"},
+      "base": {"intrinsicValue": 0, "upside": "X%"},
+      "optimistic": {"intrinsicValue": 0, "upside": "X%"}
     }
   },
   "multiplesValuation": {
@@ -84,18 +76,18 @@ Analyse ce document en profondeur et génère une valorisation complète en JSON
     "multiplesWeight": "40%",
     "weightedFairValue": 0,
     "currentPrice": ${currentPrice || 0},
-    "upside": "%",
-    "margin": "%",
+    "upside": "X%",
+    "margin": "X%",
     "signal": "ACHETER ou CONSERVER ou VENDRE",
-    "conviction": "FORTE ou MODÉRÉE ou FAIBLE"
+    "conviction": "FORTE ou MODEREE ou FAIBLE"
   },
   "executiveSummary": {
     "strengths": ["Force 1", "Force 2", "Force 3"],
     "weaknesses": ["Faiblesse 1", "Faiblesse 2"],
-    "opportunities": ["Opportunité 1", "Opportunité 2"],
+    "opportunities": ["Opportunite 1", "Opportunite 2"],
     "risks": ["Risque 1", "Risque 2", "Risque 3"],
-    "investmentThesis": "Thèse d'investissement en 4-5 phrases",
-    "keyMetrics": "3 métriques clés à surveiller",
+    "investmentThesis": "These d'investissement en 4-5 phrases",
+    "keyMetrics": "3 metriques cles a surveiller",
     "targetPrice": 0,
     "targetHorizon": "12 mois"
   }
@@ -104,39 +96,21 @@ Analyse ce document en profondeur et génère une valorisation complète en JSON
     const message = await anthropic.messages.create({
       model: 'claude-opus-4-5',
       max_tokens: 4000,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'document',
-            source: {
-              type: 'url',
-              url: downloadUrl,
-            },
-          } as any,
-          {
-            type: 'text',
-            text: prompt,
-          }
-        ],
-      }],
+      messages: [{ role: 'user', content: prompt }],
     })
 
-const text = message.content[0].type === 'text' ? message.content[0].text : ''
-let clean = text.replace(/```json|```/g, '').trim()
-
-// Trouve le premier { et le dernier } pour extraire uniquement le JSON
-const firstBrace = clean.indexOf('{')
-const lastBrace = clean.lastIndexOf('}')
-if (firstBrace !== -1 && lastBrace !== -1) {
-  clean = clean.substring(firstBrace, lastBrace + 1)
-}
-
-const valuation = JSON.parse(clean)
+    const responseText = message.content[0].type === 'text' ? message.content[0].text : ''
+    const firstBrace = responseText.indexOf('{')
+    const lastBrace = responseText.lastIndexOf('}')
+    if (firstBrace === -1 || lastBrace === -1) {
+      throw new Error('JSON invalide dans la réponse')
+    }
+    const clean = responseText.substring(firstBrace, lastBrace + 1)
+    const valuation = JSON.parse(clean)
 
     return NextResponse.json({ valuation, analyzedAt: new Date().toISOString() })
   } catch (e) {
     console.error('Valuation error:', e)
-    return NextResponse.json({ error: 'Erreur lors de la valorisation: ' + (e as Error).message }, { status: 500 })
+    return NextResponse.json({ error: 'Erreur: ' + (e as Error).message }, { status: 500 })
   }
 }

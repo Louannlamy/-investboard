@@ -62,7 +62,7 @@ export default function InvestBoard() {
   const [assets, setAssets] = useState<any[]>([])
   const [assetsLoading, setAssetsLoading] = useState(true)
   const [addingAsset, setAddingAsset] = useState(false)
-  const [valuationUrl, setValuationUrl] = useState('')
+  const [valuationFile, setValuationFile] = useState(null)
   const [valuationPrice, setValuationPrice] = useState("")
   const [valuationCurrency, setValuationCurrency] = useState("USD")
   const [valuationLoading, setValuationLoading] = useState(false)
@@ -189,19 +189,30 @@ export default function InvestBoard() {
   }
 
   const analyzeValuation = async () => {
-    if (!valuationUrl) return
+    if (!valuationFile) return
     setValuationLoading(true)
-    setValuationError("")
+    setValuationError('')
     try {
-      const formData = new FormData()
-    // url dans body JSON
-      formData.append("currentPrice", valuationPrice)
-      formData.append("currency", valuationCurrency)
-      const res = await fetch("/api/valuation", { method: "POST", body: formData })
+      const pdfjsLib = await import('pdfjs-dist')
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + pdfjsLib.version + '/pdf.worker.min.js'
+      const arrayBuffer = await valuationFile.arrayBuffer()
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+      let fullText = ''
+      for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
+        const page = await pdf.getPage(i)
+        const content = await page.getTextContent()
+        fullText += content.items.map((item) => item.str).join(' ') + '
+'
+      }
+      const res = await fetch('/api/valuation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: fullText, currentPrice: valuationPrice, currency: valuationCurrency })
+      })
       const data = await res.json()
       if (data.valuation) setValuation(data.valuation)
-      else setValuationError(data.error || "Erreur inconnue")
-    } catch(e) { setValuationError("Erreur de connexion") }
+      else setValuationError(data.error || 'Erreur inconnue')
+    } catch(e) { setValuationError('Erreur: ' + e.message) }
     setValuationLoading(false)
   }
 
@@ -759,29 +770,38 @@ export default function InvestBoard() {
       </div>
     </div>
 
-  {/* URL zone */}
-<div style={{ background:'#fff', border:'2px dashed rgba(99,102,241,0.3)', borderRadius:16, padding:32, marginBottom:20 }}>
-  <div style={{ textAlign:'center', marginBottom:20 }}>
-    <div style={{ fontSize:40, marginBottom:12 }}>🔗</div>
-    <div style={{ fontFamily:'Syne', fontSize:15, fontWeight:700, marginBottom:6 }}>Lien vers votre rapport annuel</div>
-    <div style={{ fontSize:12, color:'#6b7280', marginBottom:4 }}>Compatible Google Drive, Dropbox, ou tout lien direct PDF public</div>
-  </div>
-  <div style={{ marginBottom:12 }}>
-    <div style={{ fontSize:11, color:'#6b7280', fontWeight:500, marginBottom:6 }}>📌 Comment obtenir le lien Google Drive :</div>
-    <div style={{ fontSize:11, color:'#6b7280', lineHeight:1.8, background:'#f8f9fc', borderRadius:8, padding:'10px 12px' }}>
-      1. Ouvre Google Drive → clique droit sur le PDF → <strong>Partager</strong><br/>
-      2. Change en <strong>"Tous les utilisateurs avec le lien"</strong><br/>
-      3. Copie le lien et colle-le ici
+{/* Upload zone */}
+<div style={{ background:'#fff', border:'2px dashed rgba(99,102,241,0.3)', borderRadius:16, padding:32, marginBottom:20, textAlign:'center' }}>
+  <div style={{ fontSize:40, marginBottom:12 }}>📄</div>
+  <div style={{ fontFamily:'Syne', fontSize:15, fontWeight:700, marginBottom:6 }}>Déposez votre rapport annuel ici</div>
+  <div style={{ fontSize:12, color:'#6b7280', marginBottom:20 }}>Formats acceptés : PDF — Rapport annuel, 10-K, Document de référence AMF</div>
+  <input
+    type="file"
+    accept=".pdf"
+    onChange={e => { setValuationFile(e.target.files?.[0] || null); setValuation(null); setValuationError(''); }}
+    style={{ display:'none' }}
+    id="pdf-upload"
+  />
+  <label htmlFor="pdf-upload" style={{ display:'inline-block', background:'#6366f1', color:'#fff', borderRadius:10, padding:'10px 24px', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans' }}>
+    Choisir un fichier PDF
+  </label>
+  {valuationFile && (
+    <div style={{ marginTop:16, padding:'10px 16px', background:'#f0fdf8', border:'1px solid rgba(5,150,105,0.2)', borderRadius:10, display:'inline-flex', alignItems:'center', gap:8 }}>
+      <span style={{ fontSize:16 }}>✅</span>
+      <span style={{ fontSize:13, fontWeight:600, color:'#059669' }}>{valuationFile.name}</span>
+      <span style={{ fontSize:12, color:'#6b7280' }}>({Math.round(valuationFile.size / 1024)} Ko)</span>
     </div>
+  )}
+</div>
   </div>
   <input
     type="text"
-    value={valuationUrl}
-    onChange={e => { setValuationUrl(e.target.value); setValuationError(''); }}
+    
+    onChange={e => { setValuationFile(e.target.files?.[0] || null); setValuationError(''); }}
     placeholder="https://drive.google.com/file/d/... ou lien direct PDF"
     style={{ width:'100%', border:'1px solid rgba(25, 25, 35, 0.3)', borderRadius:10, padding:'10px 14px', fontSize:13, fontFamily:'DM Sans', color:'#111827', outline:'none', boxSizing:'border-box' }}
   />
-  {valuationUrl && (
+  {valuationFile && (
     <div style={{ marginTop:10, padding:'8px 12px', background:'#f0fdf8', border:'1px solid rgba(5,150,105,0.2)', borderRadius:8, fontSize:12, color:'#059669' }}>
       ✅ Lien détecté — prêt pour l'analyse
     </div>
@@ -789,7 +809,7 @@ export default function InvestBoard() {
 </div>
 
     {/* Prix actuel */}
-    {valuationUrl && (
+    {valuationFile && (
       <div style={{ background:'#fff', border:'1px solid rgba(0,0,0,0.07)', borderRadius:15, padding:20, marginBottom:20, boxShadow:'0 1px 3px rgba(0,0,0,0.08)' }}>
         <div style={{ fontFamily:'Syne', fontSize:14, fontWeight:700, marginBottom:14 }}>📈 Prix actuel de l'action</div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 120px auto', gap:10, alignItems:'end' }}>
@@ -985,7 +1005,7 @@ export default function InvestBoard() {
 
         {/* Bouton supprimer */}
         <div style={{ textAlign:'center', marginBottom:20 }}>
-          <button onClick={() => { setValuation(null); setValuationUrl(''); setValuationPrice(''); }} style={{ background:'none', border:'1px solid rgba(220,38,38,0.3)', borderRadius:10, padding:'8px 20px', fontSize:12, color:'#dc2626', cursor:'pointer', fontFamily:'DM Sans' }}>
+          <button onClick={() => { setValuation(null); setValuationFile(null); setValuationPrice(''); }} style={{ background:'none', border:'1px solid rgba(220,38,38,0.3)', borderRadius:10, padding:'8px 20px', fontSize:12, color:'#dc2626', cursor:'pointer', fontFamily:'DM Sans' }}>
             🗑️ Supprimer cette analyse
           </button>
         </div>
