@@ -322,6 +322,7 @@ useEffect(() => {
         Fermer ×
         </button>
         </div>
+        </div>
         {/* ══ TAB: MARCHÉ ══ */}
         {activeTab === 'market' && (
           <div>
