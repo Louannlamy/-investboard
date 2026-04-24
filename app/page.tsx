@@ -714,7 +714,12 @@ export default function InvestBoard() {
           </div>
         </div>
       )}
-      <button onClick={() => { setSelectedResult(null); setSelectedPrice(null); setGlobalSearch(''); }} style={{ marginTop:12, background:'none', border:'1px solid rgba(0,0,0,0.1)', borderRadius:8, padding:'6px 14px', fontSize:12, cursor:'pointer', color:'#6b7280', fontFamily:'DM Sans' }}>
+      <button
+  onClick={() => addAssetFromSearch(selectedResult.symbol, selectedResult.name, selectedPrice?.exchange || '', 'EQUITY')}
+  disabled={addingAsset}
+  style={{ marginTop:12, marginRight:8, background:'#6366f1', color:'#fff', border:'none', borderRadius:8, padding:'6px 14px', fontSize:12, cursor:'pointer', fontFamily:'DM Sans', fontWeight:600 }}>
+  {addingAsset ? '⏳ Ajout en cours...' : '➕ Ajouter à ma liste'}
+</button><button onClick={() => { setSelectedResult(null); setSelectedPrice(null); setGlobalSearch(''); }} style={{ marginTop:12, background:'none', border:'1px solid rgba(0,0,0,0.1)', borderRadius:8, padding:'6px 14px', fontSize:12, cursor:'pointer', color:'#6b7280', fontFamily:'DM Sans' }}>
         Fermer ×
       </button>
     </div>
