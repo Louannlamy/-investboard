@@ -12,8 +12,8 @@ type Signal = 'buy' | 'hold' | 'sell'
 type PortfolioPosition = { assetId: string; qty: number; buyPrice: number; date: string }
 export default function InvestBoard() {
   const [activeTab, setActiveTab] = useState('market')
-  const [assets, setassets] = useState<any[]>([])
-const [assetsLoading, setassetsLoading] = useState(true)
+  const [assets, setAssets] = useState<any[]>([])
+const [assetsLoading, setAssetsLoading] = useState(true)
 const [addingAsset, setAddingAsset] = useState(false)
   const [prices, setPrices] = useState<Record<string, Price>>({})
   const [news, setNews] = useState<any[]>([])
@@ -46,7 +46,7 @@ const [addingAsset, setAddingAsset] = useState(false)
 useEffect(() => {
   const saved = localStorage.getItem('ib_portfolio')
   if (saved) setPortfolio(JSON.parse(saved))
-  fetchassets()
+  fetchAssets()
   fetchPrices()
   fetchNews()
 }, [])
@@ -71,14 +71,14 @@ useEffect(() => {
       if (data.articles) setNews(data.articles)
     } catch (e) { console.error(e) }
   }
-const fetchassets = async () => {
-  setassetsLoading(true)
+const fetchAssets = async () => {
+  setAssetsLoading(true)
   try {
     const res = await fetch('/api/assets')
     const data = await res.json()
-    if (data.assets) setassets(data.assets)
+    if (data.assets) setAssets(data.assets)
   } catch(e) { console.error(e) }
-  setassetsLoading(false)
+  setAssetsLoading(false)
 }
 
 const addAssetFromSearch = async (symbol: string, name: string, exchange: string, type: string) => {
@@ -91,7 +91,7 @@ const addAssetFromSearch = async (symbol: string, name: string, exchange: string
     })
     const data = await res.json()
     if (data.asset) {
-      setassets(prev => [...prev.filter(a => a.id !== data.asset.id), data.asset])
+      setAssets(prev => [...prev.filter(a => a.id !== data.asset.id), data.asset])
       setGlobalSearch('')
       setSearchResults([])
       setSelectedResult(null)
@@ -109,7 +109,7 @@ const removeCustomAsset = async (id: string) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id })
     })
-    setassets(prev => prev.filter(a => a.id !== id))
+    setAssets(prev => prev.filter(a => a.id !== id))
   } catch(e) { console.error(e) }
 }
   const fetchAssets = async () => {
