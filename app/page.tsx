@@ -53,6 +53,12 @@ export default function InvestBoard() {
   const [simMonthly, setSimMonthly] = useState(200)
   const [simYears, setSimYears] = useState(20)
   const [simRate, setSimRate] = useState(11.5)
+  const [globalSearch, setGlobalSearch] = useState("")
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [selectedResult, setSelectedResult] = useState<any>(null)
+  const [selectedPrice, setSelectedPrice] = useState<any>(null)
+  const [selectedPriceLoading, setSelectedPriceLoading] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('ib_portfolio')
@@ -123,6 +129,29 @@ export default function InvestBoard() {
     const mr = rate / 100 / 12
     for (let m = 0; m < years * 12; m++) v = v * (1 + mr) + monthly
     return Math.round(v)
+  }
+
+  const fetchGlobalSearch = async (q: string) => {
+    if (q.length < 2) { setSearchResults([]); return }
+    setSearchLoading(true)
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
+      const data = await res.json()
+      setSearchResults(data.results || [])
+    } catch(e) { console.error(e) }
+    setSearchLoading(false)
+  }
+
+  const fetchSelectedPrice = async (symbol: string, name: string) => {
+    setSelectedResult({ symbol, name })
+    setSelectedPrice(null)
+    setSelectedPriceLoading(true)
+    try {
+      const res = await fetch("/api/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ symbol }) })
+      const data = await res.json()
+      setSelectedPrice(data)
+    } catch(e) { console.error(e) }
+    setSelectedPriceLoading(false)
   }
 
   const fetchSignalReason = async (asset: typeof ASSETS[0]) => {
