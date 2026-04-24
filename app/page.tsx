@@ -201,8 +201,7 @@ export default function InvestBoard() {
       for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
         const page = await pdf.getPage(i)
         const content = await page.getTextContent()
-        fullText += content.items.map((item) => item.str).join(' ') + '
-'
+        fullText += content.items.map((item) => item.str).join(' ') + ' '
       }
       const res = await fetch('/api/valuation', {
         method: 'POST',
