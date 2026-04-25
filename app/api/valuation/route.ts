@@ -76,7 +76,12 @@ Analyse ce document financier et génère une valorisation complète en JSON uni
     const firstBrace = text.indexOf('{')
     const lastBrace = text.lastIndexOf('}')
     if (firstBrace === -1 || lastBrace === -1) throw new Error('JSON invalide')
-    const valuation = JSON.parse(text.substring(firstBrace, lastBrace + 1))
+  let jsonStr = text.substring(firstBrace, lastBrace + 1)
+// Corrige les valeurs négatives mal formatées
+jsonStr = jsonStr.replace(/:\s*-\s*,/g, ': 0,')
+jsonStr = jsonStr.replace(/:\s*-\s*}/g, ': 0}')
+jsonStr = jsonStr.replace(/:\s*-\s*\n/g, ': 0\n')
+const valuation = JSON.parse(jsonStr)
 
     return NextResponse.json({ valuation, analyzedAt: new Date().toISOString() })
   } catch (e) {
