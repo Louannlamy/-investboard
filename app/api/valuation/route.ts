@@ -18,16 +18,15 @@ export async function POST(request: Request) {
 Le prix actuel de l action est : ${priceInfo}
 
 Analyse ce document financier et reponds UNIQUEMENT avec un objet JSON valide.
-Toutes les valeurs numeriques doivent etre des nombres (pas de tirets, pas de symboles).
-Utilise 0 si une donnee n est pas disponible.
+IMPORTANT: Toutes les valeurs numeriques doivent etre des nombres entiers ou decimaux. Jamais de tiret, jamais de symbole. Utilise 0 si inconnu.
 
 {
   "company": {
     "name": "Nom de l entreprise",
-    "ticker": "Ticker boursier",
+    "ticker": "Ticker",
     "sector": "Secteur",
     "country": "Pays",
-    "currency": "Devise",
+    "currency": "EUR",
     "fiscalYear": "2024"
   },
   "financials": {
@@ -78,7 +77,7 @@ Utilise 0 si une donnee n est pas disponible.
     "dcfWeight": "60%",
     "multiplesWeight": "40%",
     "weightedFairValue": 32,
-    "currentPrice": ${currentPrice ? parseFloat(currentPrice) : 0},
+    "currentPrice": 0,
     "upside": "+10%",
     "margin": "15%",
     "signal": "ACHETER",
@@ -89,14 +88,14 @@ Utilise 0 si une donnee n est pas disponible.
     "weaknesses": ["Faiblesse 1", "Faiblesse 2"],
     "opportunities": ["Opportunite 1", "Opportunite 2"],
     "risks": ["Risque 1", "Risque 2", "Risque 3"],
-    "investmentThesis": "These d investissement detaillee en 4-5 phrases.",
+    "investmentThesis": "These detaillee en 4-5 phrases.",
     "keyMetrics": "Metrique 1, Metrique 2, Metrique 3",
-    "targetPrice": 35,
+    "targetPrice": 30,
     "targetHorizon": "12 mois"
   }
 }
 
-Remplace toutes les valeurs par les vraies donnees du document. Reponds UNIQUEMENT avec le JSON, rien d autre.`
+Remplace toutes les valeurs par les vraies donnees du document. Reponds UNIQUEMENT avec le JSON.`
 
     const message = await anthropic.messages.create({
       model: 'claude-opus-4-5',
@@ -118,24 +117,32 @@ Remplace toutes les valeurs par les vraies donnees du document. Reponds UNIQUEME
     })
 
     const text = message.content[0].type === 'text' ? message.content[0].text : ''
-    
-    // Extrait uniquement le JSON
+
     const firstBrace = text.indexOf('{')
     const lastBrace = text.lastIndexOf('}')
-    
-    if (firstBrace === -1 || lastBrace === -1) {
-      throw new Error('Pas de JSON dans la reponse Claude')
-    }
-    
-    let jsonStr = text.substring(firstBrace, lastBrace + 1)
-    
-    // Nettoie les valeurs problematiques
-    jsonStr = jsonStr.replace(/:\s*-(?=\s*[,}\n])/g, ': 0')
-    jsonStr = jsonStr.replace(/:\s*N\/A/g, ': 0')
-    
-    const valuation = JSON.parse(jsonStr)
 
-    return NextResponse.json({ valuation, analyzedAt: new Date().toISOString() })
+    if (firstBrace === -1 || lastBrace === -1) {
+      throw new Error('Pas de JSON dans la reponse')
+    }
+
+    let jsonStr = text.substring(firstBrace, lastBrace + 1)
+
+    // Correction de toutes les valeurs invalides
+    jsonStr = jsonStr
+      .replace(/:\s*-\s*([,}\]])/g, ': 0$1')
+      .replace(/:\s*-\s*\n/g, ': 0\n')
+      .replace(/:\s*-$/gm, ': 0')
+      .replace(/:\s*undefined/g, ': 0')
+      .replace(/:\s*NaN/g, ': 0')
+
+    try {
+      const valuation = JSON.parse(jsonStr)
+      return NextResponse.json({ valuation, analyzedAt: new Date().toISOString() })
+    } catch(parseError) {
+      console.error('Parse error, debut JSON:', jsonStr.substring(0, 100))
+      throw new Error('JSON invalide - debut: ' + jsonStr.substring(0, 80))
+    }
+
   } catch (e) {
     console.error('Valuation error:', e)
     return NextResponse.json({ error: (e as Error).message }, { status: 500 })
