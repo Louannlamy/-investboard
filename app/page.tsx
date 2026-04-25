@@ -349,7 +349,7 @@ const analyzeValuation = async () => {
               </div>
               <button onClick={() => setPeaMode(!peaMode)} style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 13px', borderRadius:9, fontSize:12, fontWeight:600, cursor:'pointer', background:peaMode?'#0891b2':'#cffafe', color:peaMode?'#fff':'#0891b2', border:`1.5px solid ${peaMode?'#0891b2':'rgba(8,145,178,0.3)'}`, fontFamily:'DM Sans' }}>
                 🏦 Filtre PEA {peaMode ? '✓' : ''}
-</div>
+              </button>
 
     {/* Prix actuel */}
     {valuationFile && (
