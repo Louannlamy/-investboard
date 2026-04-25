@@ -195,7 +195,8 @@ export default function InvestBoard() {
     const reader = new FileReader()
     reader.onload = async (e) => {
       try {
-        const base64 = (e.target?.result as string).split(',')[1]
+        const result = e.target?.result as string
+        const base64 = result.includes(',') ? result.split(',')[1] : result
         const res = await fetch('/api/valuation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
