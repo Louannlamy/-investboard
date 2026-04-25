@@ -9,7 +9,11 @@ const anthropic = new Anthropic()
 export async function POST(request: Request) {
   try {
     const { base64, currentPrice, currency = 'USD' } = await request.json()
-
+// Limite la taille du base64 pour éviter de dépasser les limites
+const maxBase64Length = 2 * 1024 * 1024 // ~1.5MB de PDF
+const truncatedBase64 = base64.length > maxBase64Length 
+  ? base64.substring(0, maxBase64Length) 
+  : base64
     if (!base64) return NextResponse.json({ error: 'Fichier manquant' }, { status: 400 })
 
     const prompt = `Tu es un analyste financier senior. Le prix actuel de l'action est : ${currentPrice || 'non fourni'} ${currency}
@@ -36,7 +40,7 @@ Analyse ce document financier et génère une valorisation complète en JSON uni
     }
   },
   "multiplesValuation": { "currentPE": 0, "sectorAveragePE": 0, "currentEVEBITDA": 0, "sectorAverageEVEBITDA": 0, "currentPB": 0, "currentPS": 0, "impliedValueFromPE": 0, "impliedValueFromEVEBITDA": 0, "averageImpliedValue": 0 },
-  "synthesis": { "dcfWeight": "60%", "multiplesWeight": "40%", "weightedFairValue": 0, "currentPrice": ${currentPrice || 0}, "upside": "X%", "margin": "X%", "signal": "ACHETER ou CONSERVER ou VENDRE", "conviction": "FORTE ou MODEREE ou FAIBLE" },
+  "synthesis": { "dcfWeight": "60%", "multiplesWeight": "40%", "weightedFairValue": 0, "currentPrice": 0, "upside": "X%", "margin": "X%", "signal": "ACHETER ou CONSERVER ou VENDRE", "conviction": "FORTE ou MODEREE ou FAIBLE" },
   "executiveSummary": {
     "strengths": ["Force 1", "Force 2", "Force 3"],
     "weaknesses": ["Faiblesse 1", "Faiblesse 2"],
