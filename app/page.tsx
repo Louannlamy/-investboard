@@ -192,17 +192,23 @@ export default function InvestBoard() {
     if (!valuationFile) return
     setValuationLoading(true)
     setValuationError('')
-    try {
-      const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf')
-      pdfjsLib.GlobalWorkerOptions.workerSrc = ''
-      const arrayBuffer = await valuationFile.arrayBuffer()
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-      let fullText = ''
-      for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
-        const page = await pdf.getPage(i)
-        const content = await page.getTextContent()
-        fullText += content.items.map((item: any) => item.str || '').join(' ') + ' '
-      }
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        const base64 = (e.target?.result as string).split(',')[1]
+        const res = await fetch('/api/valuation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64, currentPrice: valuationPrice, currency: valuationCurrency })
+        })
+        const data = await res.json()
+        if (data.valuation) setValuation(data.valuation)
+        else setValuationError(data.error || 'Erreur inconnue')
+      } catch(e: any) { setValuationError(e.message) }
+      setValuationLoading(false)
+    }
+    reader.readAsDataURL(valuationFile)
+  }
       const res = await fetch('/api/valuation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
