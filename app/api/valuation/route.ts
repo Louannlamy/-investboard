@@ -139,7 +139,8 @@ Remplace toutes les valeurs par les vraies donnees du document. Reponds UNIQUEME
       const valuation = JSON.parse(jsonStr)
       return NextResponse.json({ valuation, analyzedAt: new Date().toISOString() })
     } catch(parseError) {
-      console.error('Parse error, debut JSON:', jsonStr.substring(0, 100))
+    console.error('DEBUT TEXTE CLAUDE:', JSON.stringify(text.substring(0, 200)))
+    console.error('Parse error, debut JSON:', JSON.stringify(jsonStr.substring(0, 100)))
       throw new Error('JSON invalide - debut: ' + jsonStr.substring(0, 80))
     }
 
