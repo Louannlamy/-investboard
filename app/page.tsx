@@ -209,18 +209,6 @@ export default function InvestBoard() {
     }
     reader.readAsDataURL(valuationFile)
   }
-      const res = await fetch('/api/valuation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: fullText, currentPrice: valuationPrice, currency: valuationCurrency })
-      })
-      const data = await res.json()
-      if (data.valuation) setValuation(data.valuation)
-      else setValuationError(data.error || 'Erreur inconnue')
-    } catch(e: any) { setValuationError('Erreur: ' + e.message) }
-    setValuationLoading(false)
-  }
-
   const fetchSignalReason = async (asset: typeof ASSETS[0]) => {
     if (signalReasons[asset.id] || signalLoading[asset.id]) return
     setSignalLoading(prev => ({ ...prev, [asset.id]: true }))
