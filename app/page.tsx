@@ -62,7 +62,7 @@ export default function InvestBoard() {
   const [assets, setAssets] = useState<any[]>([])
   const [assetsLoading, setAssetsLoading] = useState(true)
   const [addingAsset, setAddingAsset] = useState(false)
-  const [valuationFile, setValuationFile] = useState<File | null>(null)
+  const [valuationFile, setValuationFile] = useState(null)
   const [valuationPrice, setValuationPrice] = useState("")
   const [valuationCurrency, setValuationCurrency] = useState("USD")
   const [valuationLoading, setValuationLoading] = useState(false)
@@ -188,19 +188,21 @@ export default function InvestBoard() {
     setAddingAsset(false)
   }
 
-  const analyzeValuation = async () => {
-    if (!valuationFile) return
-    setValuationLoading(true)
-    setValuationError('')
+const analyzeValuation = async () => {
+  if (!valuationFile) return
+  setValuationLoading(true)
+  setValuationError('')
+  try {
     const reader = new FileReader()
     reader.onload = async (e) => {
       try {
         const result = e.target?.result as string
         const base64 = result.includes(',') ? result.split(',')[1] : result
+        const limited = base64.substring(0, 1000000)
         const res = await fetch('/api/valuation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64, currentPrice: valuationPrice, currency: valuationCurrency })
+          body: JSON.stringify({ base64: limited, currentPrice: valuationPrice, currency: valuationCurrency })
         })
         const data = await res.json()
         if (data.valuation) setValuation(data.valuation)
@@ -209,7 +211,12 @@ export default function InvestBoard() {
       setValuationLoading(false)
     }
     reader.readAsDataURL(valuationFile)
+  } catch(e: any) {
+    setValuationError(e.message)
+    setValuationLoading(false)
   }
+}
+
   const fetchSignalReason = async (asset: typeof ASSETS[0]) => {
     if (signalReasons[asset.id] || signalLoading[asset.id]) return
     setSignalLoading(prev => ({ ...prev, [asset.id]: true }))
@@ -785,8 +792,22 @@ export default function InvestBoard() {
       <span style={{ fontSize:13, fontWeight:600, color:'#059669' }}>{valuationFile.name}</span>
       <span style={{ fontSize:12, color:'#6b7280' }}>({Math.round(valuationFile.size / 1024)} Ko)</span>
     </div>
+  )
+  </div>
+  <input
+    type="text"
+    
+    onChange={e => { setValuationFile(e.target.files?.[0] || null); setValuationError(''); }}
+    placeholder="https://drive.google.com/file/d/... ou lien direct PDF"
+    style={{ width:'100%', border:'1px solid rgba(25, 25, 35, 0.3)', borderRadius:10, padding:'10px 14px', fontSize:13, fontFamily:'DM Sans', color:'#111827', outline:'none', boxSizing:'border-box' }}
+  />
+  {valuationFile && (
+    <div style={{ marginTop:10, padding:'8px 12px', background:'#f0fdf8', border:'1px solid rgba(5,150,105,0.2)', borderRadius:8, fontSize:12, color:'#059669' }}>
+      ✅ Lien détecté — prêt pour l'analyse
+    </div>
   )}
 </div>
+
     {/* Prix actuel */}
     {valuationFile && (
       <div style={{ background:'#fff', border:'1px solid rgba(0,0,0,0.07)', borderRadius:15, padding:20, marginBottom:20, boxShadow:'0 1px 3px rgba(0,0,0,0.08)' }}>
